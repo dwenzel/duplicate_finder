@@ -63,7 +63,7 @@ class DuplicateRegistry implements SingletonInterface {
 	 * @throws \InvalidArgumentException
 	 * @throws \RuntimeException
 	 */
-	public function add($extensionKey, $tableName, $fieldName = 'isDuplicate', array $options = array()) {
+	public function add($extensionKey, $tableName, $fieldName = 'is_duplicate', array $options = array()) {
 		$didRegister = FALSE;
 		if (empty($tableName) || !is_string($tableName)) {
 			throw new \InvalidArgumentException('No or invalid table name "' . $tableName . '" given.', 1427275047
@@ -128,7 +128,7 @@ class DuplicateRegistry implements SingletonInterface {
 	 * @param string $fieldName Name of the field to be looked up
 	 * @return boolean
 	 */
-	public function isRegistered($tableName, $fieldName = 'isDuplicate') {
+	public function isRegistered($tableName, $fieldName = 'is_duplicate') {
 		return isset($this->registry[$tableName][$fieldName]);
 	}
 
@@ -268,7 +268,7 @@ class DuplicateRegistry implements SingletonInterface {
 				$position = $options['position'];
 			}
 
-			// Makes the new "categories" field to be visible in TSFE.
+			// Makes the new "is_duplicate" field to be visible in TSFE.
 			ExtensionManagementUtility::addToAllTCAtypes($tableName, $fieldList, $typesList, $position);
 
 		}
@@ -280,23 +280,22 @@ class DuplicateRegistry implements SingletonInterface {
 	 * This has to be taken care of manually!
 	 *
 	 * @param string $tableName The table name
-	 * @param string $fieldName The field name (default isDuplicate)
+	 * @param string $fieldName The field name (default is_duplicate)
 	 * @param array $fieldConfigurationOverride Changes to the default configuration
 	 * @return array
 	 * @api
 	 */
-	static public function getTcaFieldConfiguration($tableName, $fieldName = 'isDuplicate', array $fieldConfigurationOverride = array()) {
-		// set up a new field, default name is 'isDuplicate'
+	static public function getTcaFieldConfiguration($tableName, $fieldName = 'is_duplicate', array $fieldConfigurationOverride = array()) {
+		// set up a new field, default name is 'is_duplicate'
 		$fieldConfiguration = array(
-			'config' => array(
-				'type' => 'user',
-				'userFunc' => 'CPSIT\DuplicateFinder\Service\Tca\DuplicateConfigurationService->getIsDuplicateField',
-				'parameters' => array(
-					'tableName' => $tableName,
-					'fieldName' => $fieldName,
-					'fieldConfigurationOverride' => $fieldConfigurationOverride,
-				)
+			'type' => 'user',
+			'userFunc' => 'CPSIT\DuplicateFinder\Service\Tca\DuplicateConfigurationService->getIsDuplicateField',
+			'parameters' => array(
+				'tableName' => $tableName,
+				'fieldName' => $fieldName,
+				'fieldConfigurationOverride' => $fieldConfigurationOverride,
 			),
+			'noTableWrapping' => 1,
 		);
 
 		// Merge changes to TCA configuration

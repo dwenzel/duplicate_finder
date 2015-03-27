@@ -117,7 +117,7 @@ class DuplicateRegistry implements SingletonInterface {
 	 *
 	 * @return array
 	 */
-	public function getCategorizedTables() {
+	public function getDuplicateAwareTables() {
 		return array_keys($this->registry);
 	}
 
@@ -201,7 +201,7 @@ class DuplicateRegistry implements SingletonInterface {
 	 * @param string $fieldName Name of the field to be used to store duplicate status
 	 * @param array $options Additional configuration options
 	 *              + fieldConfiguration: TCA field config array to override defaults
-	 *              + label: backend label of the categories field
+	 *              + label: backend label of the duplicate status field
 	 * @return void
 	 */
 	protected function addTcaColumn($tableName, $fieldName, array $options) {
@@ -235,8 +235,8 @@ class DuplicateRegistry implements SingletonInterface {
 	}
 
 	/**
-	 * Creates the 'fieldList' string for $fieldName which includes a categories tab.
-	 * But only one categories tab is added per table.
+	 * Creates the 'fieldList' string for $fieldName which includes a data quality tab.
+	 * But only one data quality tab is added per table.
 	 *
 	 * @param string $tableName
 	 * @param string $fieldName
@@ -255,12 +255,12 @@ class DuplicateRegistry implements SingletonInterface {
 	/**
 	 * Add a new field into the TCA types -> showitem
 	 *
-	 * @param string $tableName Name of the table to be categorized
-	 * @param string $fieldName Name of the field to be used to store categories
+	 * @param string $tableName Name of the table to become duplicate aware
+	 * @param string $fieldName Name of the field to be used to store the duplicate status
 	 * @param array $options Additional configuration options
 	 *              + fieldList: field configuration to be added to showitems
-	 *              + typesList: list of types that shall visualize the categories field
-	 *              + position: insert position of the categories field
+	 *              + typesList: list of types that shall visualize the duplicate status field
+	 *              + position: insert position of the duplicate status field
 	 * @return void
 	 */
 	protected function addToAllTcaTypes($tableName, $fieldName, array $options) {
@@ -283,10 +283,8 @@ class DuplicateRegistry implements SingletonInterface {
 			if (!empty($options['position'])) {
 				$position = $options['position'];
 			}
-
-			// Makes the new "is_duplicate" field to be visible in TSFE.
+			// Makes the new duplicate status field visible.
 			ExtensionManagementUtility::addToAllTCAtypes($tableName, $fieldList, $typesList, $position);
-
 		}
 	}
 

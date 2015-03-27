@@ -163,7 +163,7 @@ class DuplicateConfigurationService {
 
 	/**
 	 * Renders a list of duplicates with edit link buttons
-	 * 
+	 *
 	 * @param \array $duplicates An array of records
 	 * @param \string $tableName
 	 * @param \TYPO3\CMS\Backend\Form\FormEngine $parentObject

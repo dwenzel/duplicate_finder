@@ -10,8 +10,8 @@ class DuplicateUtility {
 	 * FOR USE IN ext_localconf.php FILES or files in Configuration/TCA/Overrides/*.php Use the latter to benefit from TCA caching!
 	 *
 	 * @param string $extensionKey Extension key to be used
-	 * @param string $tableName Name of the table to be categorized
-	 * @param string $fieldName Name of the field to be used to store categories
+	 * @param string $tableName Name of the table to be made duplicate aware
+	 * @param string $fieldName Name of the field to be used to store the duplicate status
 	 * @param array $options Additional configuration options
 	 */
 	static public function makeDuplicateAware($extensionKey, $tableName, $fieldName = 'is_duplicate', array $options = array()) {

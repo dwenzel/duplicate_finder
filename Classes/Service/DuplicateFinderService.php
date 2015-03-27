@@ -5,6 +5,7 @@ namespace CPSIT\DuplicateFinder\Service;
 use CPSIT\DuplicateFinder\Domain\Model\DuplicateInterface;
 use Cps\WisImportCourses\Domain\Model\Dto\EmConfiguration;
 use Cps\WisLib\Utility\ReflectionUtility;
+use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManager;
@@ -45,7 +46,7 @@ use TYPO3\CMS\Extbase\Reflection\ObjectAccess;
  *
  */
  
-class DuplicateFinderService {
+class DuplicateFinderService implements SingletonInterface {
 	const HASH_TABLE = 'tx_duplicatefinder_duplicate_hash';
 	const HASH_MAX_LENGTH = 64;
 

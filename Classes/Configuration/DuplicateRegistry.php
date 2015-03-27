@@ -177,6 +177,21 @@ class DuplicateRegistry implements SingletonInterface {
 	protected function applyTcaForTableAndField($tableName, $fieldName) {
 		$this->addTcaColumn($tableName, $fieldName, $this->registry[$tableName][$fieldName]);
 		$this->addToAllTcaTypes($tableName, $fieldName, $this->registry[$tableName][$fieldName]);
+		$this->addEnableColumn($tableName, $fieldName);
+	}
+
+	/**
+	 * Adds the field to the enable columns
+	 *
+	 * @param $tableName
+	 * @param $fieldName
+	 */
+	protected function addEnableColumn($tableName, $fieldName) {
+		if (isset($GLOBALS['TCA'][$tableName]['ctrl']['enablecolumns'])
+			AND is_array($GLOBALS['TCA'][$tableName]['ctrl']['enablecolumns'])
+			AND !array_key_exists($fieldName, $GLOBALS['TCA'][$tableName]['ctrl']['enablecolumns'])) {
+			$GLOBALS['TCA'][$tableName]['ctrl']['enablecolumns'][$fieldName] = $fieldName;
+		}
 	}
 
 	/**
@@ -193,7 +208,7 @@ class DuplicateRegistry implements SingletonInterface {
 		// Makes sure to add more TCA to an existing structure
 		if (isset($GLOBALS['TCA'][$tableName]['columns'])) {
 			// Take specific label into account
-			$label = 'LLL:EXT:duplicate_finder/Resources/Private/Language/locallang_tca.xlf:label.isDuplicate';
+			$label = 'LLL:EXT:duplicate_finder/Resources/Private/Language/locallang.xlf:label.duplicateStatus';
 			if (!empty($options['label'])) {
 				$label = $options['label'];
 			}
@@ -230,10 +245,10 @@ class DuplicateRegistry implements SingletonInterface {
 	protected function addDataQualityTab($tableName, $fieldName) {
 		$fieldList = '';
 		if (!in_array($tableName, $this->addedDataQualityTabs)) {
-			$fieldList .= '--div--;LLL:EXT:duplicate_finder/Resources/Private/Language/locallang_tca.xlf:label.tab.dataQuality, ';
+			$fieldList .= '--div--;LLL:EXT:duplicate_finder/Resources/Private/Language/locallang.xlf:label.tab.dataQuality, ';
 			$this->addedDataQualityTabs[] = $tableName;
 		}
-		$fieldList .= $fieldName;
+		$fieldList .= $fieldName . ',duplicates';
 		return $fieldList;
 	}
 

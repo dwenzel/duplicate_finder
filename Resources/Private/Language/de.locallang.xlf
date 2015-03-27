@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<xliff version="1.0">
+	<file source-language="en" target-language="de" datatype="plaintext" original="messages" date="2015-03-26T16:15:11Z">
+		<header>
+			<authorName>Dirk Wenzel</authorName>
+			<authorEmail>dirk.wenzel@cps-it.de</authorEmail>
+			<generator>LFEditor</generator>
+		</header>
+		<body>
+		<trans-unit id="label.duplicateStatus" approved="yes" xml:space="preserve">
+			<source>Duplicate Status</source>
+			<target>Dublettenstatus</target>
+		</trans-unit>
+		<trans-unit id="label.failed" approved="yes" xml:space="preserve">
+			<source>Failed!</source>
+			<target>Nicht bestanden!</target>
+		</trans-unit>
+		<trans-unit id="label.notProcessedYet" approved="yes" xml:space="preserve">
+			<source>Not yet processed.</source>
+			<target>Noch nicht überprüft.</target>
+		</trans-unit>
+		<trans-unit id="label.passed" approved="yes" xml:space="preserve">
+			<source>Passed!</source>
+			<target>Bestanden!</target>
+		</trans-unit>
+		<trans-unit id="label.tab.dataQuality" approved="yes" xml:space="preserve">
+			<source>Data Quality</source>
+			<target>Datenqualität</target>
+		</trans-unit>
+		<trans-unit id="message.hasDuplicates" approved="yes" xml:space="preserve">
+			<source>There are %s duplicates of this record:</source>
+			<target>Zu diesem Original existieren jedoch %s Dubletten:</target>
+		</trans-unit>
+		<trans-unit id="message.isDuplicateOf" approved="yes" xml:space="preserve">
+			<source>This record is a duplicate of:</source>
+			<target>Dieser Datensatz ist ein Duplikat von:</target>
+		</trans-unit>
+		<trans-unit id="message.noDuplicates" approved="yes" xml:space="preserve">
+			<source>There is no duplicate!</source>
+			<target>Es liegt keine Dublette vor!</target>
+		</trans-unit>
+		<trans-unit id="question.duplicateTestPassed" approved="yes" xml:space="preserve">
+			<source>Test for duplicates passed?</source>
+			<target>Wurde die Dublettenprüfung bestanden?</target>
+		</trans-unit>
+		</body>
+	</file>
+</xliff>

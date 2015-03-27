@@ -37,13 +37,14 @@ class DuplicateRegistry implements SingletonInterface {
 		return GeneralUtility::makeInstance(__CLASS__);
 	}
 
-
 	/**
 	 * Creates this object.
 	 */
 	public function __construct() {
 		$this->sqlTemplate = str_repeat(PHP_EOL, 3) . 'CREATE TABLE %s (' . PHP_EOL
-			. '  %s int(11) DEFAULT \'0\' NOT NULL' . PHP_EOL . ');' . str_repeat(PHP_EOL, 3);
+			. '  %s tinyint(3) DEFAULT \'0\' NOT NULL,' . PHP_EOL
+			. ' duplicate_hash_id int(11) DEFAULT \'0\' NOT NULL' . PHP_EOL
+			. ');' . str_repeat(PHP_EOL, 3);
 	}
 
 	/**
@@ -307,5 +308,30 @@ class DuplicateRegistry implements SingletonInterface {
 		}
 
 		return $fieldConfiguration;
+	}
+
+	/**
+	 * A slot method to inject the required duplicate database fields to the
+	 * tables definition string
+	 *
+	 * @param array $sqlString
+	 * @return array
+	 */
+	public function addDuplicateDatabaseSchemaToTablesDefinition(array $sqlString) {
+		$sqlString[] = $this->getDatabaseTableDefinitions();
+		return array('sqlString' => $sqlString);
+	}
+
+	/**
+	 * A slot method to inject the required duplicate database fields of an
+	 * extension to the tables definition string
+	 *
+	 * @param array $sqlString
+	 * @param string $extensionKey
+	 * @return array
+	 */
+	public function addExtensionDuplicateDatabaseSchemaToTablesDefinition(array $sqlString, $extensionKey) {
+		$sqlString[] = $this->getDatabaseTableDefinition($extensionKey);
+		return array('sqlString' => $sqlString, 'extensionKey' => $extensionKey);
 	}
 }

@@ -14,7 +14,7 @@ class DuplicateUtility {
 	 * @param string $fieldName Name of the field to be used to store categories
 	 * @param array $options Additional configuration options
 	 */
-	static public function makeDuplicateAware($extensionKey, $tableName, $fieldName = 'categories', array $options = array()) {
+	static public function makeDuplicateAware($extensionKey, $tableName, $fieldName = 'is_duplicate', array $options = array()) {
 		// Update the duplicate registry
 		$result = \CPSIT\DuplicateFinder\Configuration\DuplicateRegistry::getInstance()->add($extensionKey, $tableName, $fieldName, $options);
 		if ($result === FALSE) {

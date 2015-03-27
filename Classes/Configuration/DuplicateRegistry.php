@@ -80,7 +80,17 @@ class DuplicateRegistry implements SingletonInterface {
 
 			if (!isset($GLOBALS['TCA'][$tableName]['columns']) && isset($GLOBALS['TCA'][$tableName]['ctrl']['dynamicConfigFile'])) {
 				// Handle deprecated old style dynamic TCA column loading.
-				ExtensionManagementUtility::loadNewTcaColumnsConfigFiles();
+				$columnsConfigFile = $GLOBALS['TCA'][$tableName]['ctrl']['dynamicConfigFile'];
+				if ($columnsConfigFile) {
+					if (GeneralUtility::isAbsPath($columnsConfigFile)) {
+						include($columnsConfigFile);
+					} else {
+						throw new \RuntimeException(
+							'Dynamic config file for table ' . $tableName . ' not found',
+							1427289509
+						);
+					}
+				}
 			}
 
 			if (isset($GLOBALS['TCA'][$tableName]['columns'])) {

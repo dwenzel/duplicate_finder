@@ -14,7 +14,7 @@ use TYPO3\CMS\Extbase\Reflection\ObjectAccess;
 /***************************************************************
  *  Copyright notice
  *
- *  (c) 2014 Wido Widlewski <widlewski@cps-it.de>
+ *  (c) 2014 Dirk Wenzel <dirk.wenzel@cps-it.de>
  *  All rights reserved
  *
  *  This script is part of the TYPO3 project. The TYPO3 project is
@@ -37,9 +37,9 @@ use TYPO3\CMS\Extbase\Reflection\ObjectAccess;
 /**
  *	Duplicate finder service
  *
- * Find duplicate courses by comparing their hashes
+ * Find duplicate records by comparing their hashes
  * @author Dirk Wenzel dirk.wenzel@cps-it.de>
- * @package wis_import_courses
+ * @package duplicate_finder
  * @license http://www.gnu.org/licenses/gpl.html GNU General Public License, version 3 or later
  *
  */
@@ -113,7 +113,7 @@ class DuplicateFinderService implements SingletonInterface {
 
 	/**
 	 * Set configuration
-	 * See TS module.tx_duplicatefinder.settings.duplicateFinder for a valid example
+	 * See TS module.tx_duplicatefinder.settings for a valid example
 	 *
 	 * @param \array $configuration An array containing a valid configuration.
 	 */

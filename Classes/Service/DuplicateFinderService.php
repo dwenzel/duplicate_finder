@@ -50,13 +50,6 @@ class DuplicateFinderService implements SingletonInterface {
 	const HASH_MAX_LENGTH = 64;
 
 	/**
-	 * Course repository
-	 *
-	 * @var \CPSIT\WisPascourse\Domain\Repository\CourseRepository
-	 */
-	protected $courseRepository;
-
-	/**
 	 * Configuration Manager
 	 *
 	 * @var \TYPO3\CMS\Extbase\Configuration\ConfigurationManager

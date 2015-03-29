@@ -172,7 +172,7 @@ class DuplicateFinderService implements SingletonInterface {
 	public function getFuzzyHash($object) {
 		return call_user_func(
 				$this->getFuzzyHashFunction(), 
-				$this->getHashFieldsContent()
+				$this->getHashFieldsContent($object)
 			);
 	}
 
@@ -294,7 +294,6 @@ class DuplicateFinderService implements SingletonInterface {
 	 * @return \array
 	 */
 	public function getDuplicates($hash, $table = NULL, $fieldNames = 'uid') {
-		$rows = array();
 		$andWhere = '';
 		if($table) {
 			$andWhere = ' AND WHERE foreign_table=' . $table;

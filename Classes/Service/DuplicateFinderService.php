@@ -3,8 +3,6 @@
 namespace CPSIT\DuplicateFinder\Service;
 
 use CPSIT\DuplicateFinder\Domain\Model\DuplicateInterface;
-use Cps\WisImportCourses\Domain\Model\Dto\EmConfiguration;
-use Cps\WisLib\Utility\ReflectionUtility;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;

@@ -1,31 +1,21 @@
 module.tx_duplicatefinder {
 	settings {
-		duplicateFinder {
-			hash {
-				// a string indicating the hash function to use
-				// please make shure, this function exists on your system
- 				// for instance using php function hash_algos() */
-				function = sha512
-			}
-			fuzzyHash {
-				// fuzzy hashing is not implemented yet
-				function = ssdeep
-			}
+		hash {
+			// a string indicating the hash function to use
+			// please make sure, this function exists on your system
+			// for instance using php function hash_algos()
+			function = sha512
+		}
+		fuzzyHash {
+			// fuzzy hashing is not implemented yet
+			function = ssdeep
+		}
 
-			classes {
-				CPSIT\WisPascourse\Domain\Model\Course {
-					hashFields = cs_name,cs_subtitle,pas_coursesupplier,cs_mode_unterrichtsform,cs_occupation_accompanying,cs_type,qcat_flexible_start,cs_price,cs_promotion
-				}
-				Cps\WisImportCourses\Domain\Model\Schedule {
-					hashFields =
-				}
-				CPSIT\WisPasaddress\Domain\Model\Address {
-					hashFields = a_name,a_street,a_city,a_zip,a_country,a_boxno,a_zipbox,a_phone,a_email,supplier_type,supplier,uradresse,virtual
-				}
-				CPSIT\WisPascontact\Domain\Model\Contact {
-					hashFields = c_name,c_surname,c_salutation,supplier_type,supplier,urkontakt,type
-				}
-			}
+		tables {
+			// Usage:
+			// table_name {
+			// 	hashFields = field_name_a, field_name_b
+			// }
 		}
 	}
 }

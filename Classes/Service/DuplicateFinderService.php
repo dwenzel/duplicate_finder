@@ -176,13 +176,13 @@ class DuplicateFinderService implements SingletonInterface {
 	}
 
 	/**
-	 * @param $className
+	 * @param $tableName
 	 * @return mixed
 	 */
-	public function getDuplicateHashFields($className) {
+	public function getDuplicateHashFields($tableName) {
 		return ArrayUtility::getValueByPath(
 			$this->configuration,
-			'classes/' . $className . '/hashFields'
+			'tables/' . $tableName . '/hashFields'
 		);
 	}
 
@@ -341,16 +341,13 @@ class DuplicateFinderService implements SingletonInterface {
 	/**
 	 * Find Duplicates for a given table
 	 *
-	 * @param \string $className Fully qualified class name
+	 * @param \string $tableName Table name
 	 * @param \int $queueLength How many record should be processed at once.
 	 * @return void
 	 */
-	public function find($className, $queueLength = 100) {
-		$object = new $className();
-		$tableName = ReflectionUtility::getTableName($object);
-		$fieldNames = $this->getDuplicateHashFields($className);
-
+	public function find($tableName, $queueLength = 100) {
 		$this->buildQueue($tableName, $queueLength);
+		$fieldNames = $this->getDuplicateHashFields($tableName);
 		foreach($this->queue as $uid) {
 			$record = $this->database->exec_SELECTgetSingleRow(
 				$fieldNames,

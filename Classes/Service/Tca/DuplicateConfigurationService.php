@@ -12,6 +12,7 @@ namespace CPSIT\DuplicateFinder\Service\Tca;
  *
  * The TYPO3 project - inspiring people to share!
  */
+use CPSIT\DuplicateFinder\Service\DuplicateFinderService;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Backend\Utility\IconUtility;
 
@@ -24,6 +25,13 @@ use TYPO3\CMS\Backend\Utility\IconUtility;
  * @package CPSIT\WisImportCourses\Service\Tca
  */
 class DuplicateConfigurationService {
+	/**
+	 * Database
+	 *
+	 * @var \TYPO3\CMS\Core\Database\DatabaseConnection
+	 */
+	protected $database;
+
 	/**
 	 * @var string
 	 */
@@ -74,6 +82,12 @@ class DuplicateConfigurationService {
 				onclick="top.launchView(\'###FIELD_TABLE###\', \'###FIELD_UID###\'); return false;"
 				title="###FIELD_TITLE###">###FIELD_ICON###</a>';
 
+	public function __construct() {
+		if (!$this->database instanceof \TYPO3\CMS\Core\Database\DatabaseConnection) {
+			$this->database = $GLOBALS['TYPO3_DB'];
+		}
+	}
+
 	/**
 	 * User function: Gets a backend form field for 'is_duplicate'
 	 *
@@ -95,19 +109,19 @@ class DuplicateConfigurationService {
 		if ($isHashed) {
 			if ($isDuplicate) {
 				$labelKey = 'label.failed';
+				$original = $this->getOriginal($parameters['table'], $parameters['field'], $parameters['row']);
 				$this->templateMarker['DUPLICATEMESSAGE'] = $parentObject->sL(self::$languageFile . 'message.isDuplicateOf');
 				$this->templateMarker['STATUSCLASS'] = 'error';
-				$this->templateMarker['RECORDS'] = $this->renderOriginal($parameters['row'], $parameters['table'], $parentObject);
+				$this->templateMarker['RECORDS'] = $this->renderOriginal($original, $parameters['table'], $parentObject);
 			} else {
 				$labelKey = 'label.passed';
 				$this->templateMarker['STATUSCLASS'] = 'ok';
 				$duplicateRecords = $this->getDuplicates($parameters['table'], $parameters['field'], $parameters['row']);
-				if ((bool) $duplicateRecords) {
+				if ($duplicatesCount = count($duplicateRecords)) {
+					$messageKey = ($duplicatesCount > 1 )? 'message.hasDuplicates' : 'message.hasOneDuplicate';
 					$this->templateMarker['RECORDS'] = $this->renderDuplicatesList($duplicateRecords, $parameters['table'], $parentObject);
 					$this->templateMarker['DUPLICATEMESSAGE'] = sprintf(
-						$parentObject->sL(self::$languageFile . 'message.hasDuplicates'),
-						count($duplicateRecords)
-					);
+						$parentObject->sL(self::$languageFile . $messageKey), $duplicatesCount);
 				} else {
 					$this->templateMarker['DUPLICATEMESSAGE'] = $parentObject->sL(self::$languageFile . 'message.noDuplicates');
 				}
@@ -133,12 +147,45 @@ class DuplicateConfigurationService {
 	 * @return \array | NULL
 	 */
 	protected function getDuplicates ($tableName, $fieldName, $originalRecord) {
-		return BackendUtility::getRecordsByField(
-			$tableName,
-			$fieldName,
-			'1',
-			' AND duplicate_hash_id=' . $originalRecord['duplicate_hash_id']
+		if ($hashRecord = $this->getHashRecord($originalRecord['duplicate_hash_id'])) {
+			$duplicateHashes = $this->database->exec_SELECTgetRows(
+				'foreign_uid',
+				DuplicateFinderService::HASH_TABLE,
+				'hash="' . $hashRecord['hash'] . '" AND foreign_table="' . $tableName . '" AND foreign_uid!=' . $originalRecord['uid']
+			);
+			// @todo do this in one query
+			$uIds = array();
+			if ($duplicateHashes) {
+				foreach ($duplicateHashes as $key=>$value) {
+					$uIds[] = $value['foreign_uid'];
+				}
+				if ((bool) $uIds) {
+					$uidList = implode(',', $uIds);
+					return BackendUtility::getRecordsByField(
+						$tableName,
+						$fieldName,
+						'1',
+						' AND uid IN (' . $uidList . ')'
+					);
+				}
+			}
+		}
+		return NULL;
+	}
+
+	/**
+	 * Gets a hash record by uid
+	 *
+	 * @param \integer $uid
+	 * @return array|FALSE|NULL
+	 */
+	protected function getHashRecord($uid) {
+		$hashRecord = $this->database->exec_SELECTgetSingleRow(
+			'*',
+			DuplicateFinderService::HASH_TABLE,
+			'uid=' . $uid
 		);
+		return $hashRecord;
 	}
 
 	/**
@@ -150,15 +197,21 @@ class DuplicateConfigurationService {
 	 * @return \array | NULL
 	 */
 	protected function getOriginal ($tableName, $fieldName, $duplicateRecord) {
-		return BackendUtility::getRecordsByField(
-			$tableName,
-			$fieldName,
-			'0',
-			' AND duplicate_hash_id=' . $duplicateRecord['duplicate_hash_id'],
-			'',
-			'',
-			1
-		);
+		if ($hashRecord = $this->getHashRecord($duplicateRecord['duplicate_hash_id'])) {
+			$originalHashRecord = $this->database->exec_SELECTgetSingleRow(
+				'*',
+				DuplicateFinderService::HASH_TABLE,
+				'hash="' . $hashRecord['hash'] . '" AND foreign_table="'
+					. $hashRecord['foreign_table'] . '" AND foreign_uid!=' . $hashRecord['foreign_uid']
+			);
+			if ($originalHashRecord) {
+				return BackendUtility::getRecord(
+					$tableName,
+					$originalHashRecord['foreign_uid']
+				);
+			}
+		}
+		return NULL;
 	}
 
 	/**

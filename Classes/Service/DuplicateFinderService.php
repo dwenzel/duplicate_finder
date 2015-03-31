@@ -3,8 +3,7 @@
 namespace CPSIT\DuplicateFinder\Service;
 
 use CPSIT\DuplicateFinder\Domain\Model\DuplicateInterface;
-use Cps\WisImportCourses\Domain\Model\Dto\EmConfiguration;
-use Cps\WisLib\Utility\ReflectionUtility;
+use CPSIT\DuplicateFinder\Utility\ReflectionUtility;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -16,7 +15,7 @@ use TYPO3\CMS\Extbase\Reflection\ObjectAccess;
 /***************************************************************
  *  Copyright notice
  *
- *  (c) 2014 Wido Widlewski <widlewski@cps-it.de>
+ *  (c) 2014 Dirk Wenzel <dirk.wenzel@cps-it.de>
  *  All rights reserved
  *
  *  This script is part of the TYPO3 project. The TYPO3 project is

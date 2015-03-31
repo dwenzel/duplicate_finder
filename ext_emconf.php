@@ -1,9 +1,9 @@
 <?php
 
 /***************************************************************
- * Extension Manager/Repository config file for ext "wis_base_mod".
+ * Extension Manager/Repository config file for ext "duplicate_finder".
  *
- * Auto generated 10-03-2015 11:32
+ * Auto generated 31-03-2015 15:51
  *
  * Manual updates:
  * Only the data in the array - everything else is removed by next
@@ -21,7 +21,7 @@ $EM_CONF[$_EXTKEY] = array (
 	'uploadfolder' => 0,
 	'createDirs' => '',
 	'clearCacheOnLoad' => 0,
-	'version' => '0.0.1',
+	'version' => '0.1.0',
 	'constraints' => 
 	array (
 		'depends' => 
@@ -35,6 +35,6 @@ $EM_CONF[$_EXTKEY] = array (
 		array (
 		),
 	),
-	'_md5_values_when_last_written' => 'a:9:{s:9:"ChangeLog";s:4:"56cd";s:10:"README.txt";s:4:"1491";s:18:"class.wis_base.php";s:4:"bea5";s:12:"ext_icon.gif";s:4:"3f11";s:13:"locallang.xml";s:4:"98cb";s:37:"Classes/Backend/Module/BaseModule.php";s:4:"a606";s:37:"Resources/Public/Css/wis_base_mod.css";s:4:"3bfd";s:19:"doc/wizard_form.dat";s:4:"3b94";s:20:"doc/wizard_form.html";s:4:"2a86";}',
+	'_md5_values_when_last_written' => 'a:19:{s:9:"ChangeLog";s:4:"cc01";s:17:"ext_localconf.php";s:4:"fcae";s:14:"ext_tables.php";s:4:"2d56";s:14:"ext_tables.sql";s:4:"461b";s:46:"Classes/Command/DuplicateCommandController.php";s:4:"a4bf";s:43:"Classes/Configuration/DuplicateRegistry.php";s:4:"027e";s:43:"Classes/Domain/Model/DuplicateInterface.php";s:4:"6797";s:32:"Classes/Hooks/FormEngineHook.php";s:4:"6894";s:33:"Classes/Hooks/IconUtilityHook.php";s:4:"abc1";s:42:"Classes/Service/DuplicateFinderService.php";s:4:"2199";s:53:"Classes/Service/Tca/DuplicateConfigurationService.php";s:4:"b352";s:36:"Classes/Utility/DuplicateUtility.php";s:4:"7468";s:37:"Classes/Utility/ReflectionUtility.php";s:4:"74b8";s:38:"Configuration/TypoScript/constants.txt";s:4:"f624";s:34:"Configuration/TypoScript/setup.txt";s:4:"8e1b";s:43:"Resources/Private/Language/de.locallang.xlf";s:4:"6086";s:40:"Resources/Private/Language/locallang.xlf";s:4:"958e";s:44:"Resources/Public/Icons/icon-is-duplicate.gif";s:4:"b351";s:52:"Resources/Public/Icons/icon-overlay-is-duplicate.gif";s:4:"b351";}',
 );
 

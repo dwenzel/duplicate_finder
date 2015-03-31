@@ -1,0 +1,21 @@
+module.tx_duplicatefinder {
+	settings {
+		hash {
+			// a string indicating the hash function to use
+			// please make sure, this function exists on your system
+			// for instance using php function hash_algos()
+			function = sha512
+		}
+		fuzzyHash {
+			// fuzzy hashing is not implemented yet
+			function = ssdeep
+		}
+
+		classes {
+			// Usage:
+			// <VendorName>\<Path>\<To>\<Class> {
+			// 	hashFields = field_name_a, field_name_b
+			// }
+		}
+	}
+}

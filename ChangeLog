@@ -1,0 +1,17 @@
+2015-03-31         [RELEASE] Release of duplicate_finder 0.1.0 (Dirk Wenzel)
+2015-03-27 2f34e31 [BUGFIX] fixed error in queries which caused display of wrong records for original and duplicates (Dirk Wenzel)
+2015-03-27 3cf6e25 [TASK] TypoScript settings for modules cleaned up (Dirk Wenzel)
+2015-03-27 060b115 [TASK] reflection utility moved to duplicate_finder (Dirk Wenzel)
+2015-03-27 72dd4f3 [TASK] artifacts from copying removed. (Dirk Wenzel)
+2015-03-27 3fdfd17 [TASK] DuplicateConfigurationService now renders a field with duplicate status, and either the original record with an show link or a list of duplicates or only a message. (Dirk Wenzel)
+2015-03-27 7192541 [TASK] made DuplicateFinderService a Singleton (Dirk Wenzel)
+2015-03-27 511bf46 [TASK] DuplicateRegistry now adds field to enable columns, localization file renamed. Add field duplicates to field list. (Dirk Wenzel)
+2015-03-27 59f40eb [TASK] SQL template edited, field duplicate_hash_id added, slot methods to inject the required database fields implemented (Dirk Wenzel)
+2015-03-27 6178c4b [TASK] default field name changed to is_duplicate (Dirk Wenzel)
+2015-03-27 cb1a225 [TASK] internal method ExtensionManagementUtility::loadNewTcaColumnsConfigFiles replaced (Dirk Wenzel)
+2015-03-27 4474595 [TASK] localized strings added (Dirk Wenzel)
+2015-03-25 3a99378 [TASK] DuplicateRegistry implemented (Dirk Wenzel)
+2015-03-25 0959fd4 [TASK] DuplicateUtility implemented (Dirk Wenzel)
+2015-03-13 d4d6b01 [TASK] Duplicate finder refactored (moved from wis_import_courses). Icons exchanged. (Dirk Wenzel)
+
+

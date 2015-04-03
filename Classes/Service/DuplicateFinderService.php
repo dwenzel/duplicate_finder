@@ -3,7 +3,6 @@
 namespace CPSIT\DuplicateFinder\Service;
 
 use CPSIT\DuplicateFinder\Domain\Model\DuplicateInterface;
-use CPSIT\DuplicateFinder\Utility\ReflectionUtility;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -11,6 +10,7 @@ use TYPO3\CMS\Extbase\Configuration\ConfigurationManager;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface;
 use TYPO3\CMS\Extbase\Object\ObjectManager;
 use TYPO3\CMS\Extbase\Reflection\ObjectAccess;
+use CPSIT\DuplicateFinder\Configuration\InvalidConfigurationException;
 
 /***************************************************************
  *  Copyright notice
@@ -38,9 +38,9 @@ use TYPO3\CMS\Extbase\Reflection\ObjectAccess;
 /**
  *	Duplicate finder service
  *
- * Find duplicate courses by comparing their hashes
+ * Find duplicate records by comparing their hashes
  * @author Dirk Wenzel dirk.wenzel@cps-it.de>
- * @package wis_import_courses
+ * @package duplicate_finder
  * @license http://www.gnu.org/licenses/gpl.html GNU General Public License, version 3 or later
  *
  */
@@ -48,13 +48,6 @@ use TYPO3\CMS\Extbase\Reflection\ObjectAccess;
 class DuplicateFinderService implements SingletonInterface {
 	const HASH_TABLE = 'tx_duplicatefinder_duplicate_hash';
 	const HASH_MAX_LENGTH = 64;
-
-	/**
-	 * Course repository
-	 *
-	 * @var \CPSIT\WisPascourse\Domain\Repository\CourseRepository
-	 */
-	protected $courseRepository;
 
 	/**
 	 * Configuration Manager
@@ -111,10 +104,19 @@ class DuplicateFinderService implements SingletonInterface {
 			$this->setConfiguration(ArrayUtility::getValueByPath($fullTypoScript, 'module/tx_duplicatefinder/settings'));
 		}
 	}
+	
+	/**
+	 * Gets the configuration
+	 *
+	 * @return \array | NULL
+	 */
+	public function getConfiguration() {
+		return $this->configuration;
+	}
 
 	/**
 	 * Set configuration
-	 * See TS module.tx_duplicatefinder.settings.duplicateFinder for a valid example
+	 * See TS module.tx_duplicatefinder.settings for a valid example
 	 *
 	 * @param \array $configuration An array containing a valid configuration.
 	 */
@@ -146,13 +148,41 @@ class DuplicateFinderService implements SingletonInterface {
 	 * Gets a hash value over configured fields
 	 * Please be aware that we limit the length of the
 	 * hash string to 64 characters
-
-
-*
-*@param \CPSIT\DuplicateFinder\Domain\Model\DuplicateInterface|\array $object
+	 *
+	 * @param \CPSIT\DuplicateFinder\Domain\Model\DuplicateInterface|\array $object
 	 * @return \string
 	 */
 	public function getHash($object) {
+		$hash = hash(
+				$this->getHashFunction(),
+				$this->getHashFieldsContent($object)
+		);
+		if (strlen($hash) > self::HASH_MAX_LENGTH) {
+			$hash = substr($hash, 0, self::HASH_MAX_LENGTH);
+		}
+		return $hash;
+	}
+
+	/**
+	 * Gets a fuzzy hash value over configured fields
+	 *
+	 * @param \CPSIT\DuplicateFinder\Domain\Model\DuplicateInterface|\array $object
+	 * @return \string
+	 */
+	public function getFuzzyHash($object) {
+		return call_user_func(
+				$this->getFuzzyHashFunction(), 
+				$this->getHashFieldsContent($object)
+			);
+	}
+
+	/**
+	 * Gets the content of the hash fields
+	 *
+	 * @param \CPSIT\DuplicateFinder\Domain\Model\DuplicateInterface|\array $object
+	 * @return \string
+	 */
+	protected function getHashFieldsContent($object) {
 		$input = '';
 		if(is_object($object)) {
 			$fields = GeneralUtility::trimExplode(',', $this->getDuplicateHashFields($object), TRUE);
@@ -162,27 +192,30 @@ class DuplicateFinderService implements SingletonInterface {
 				}
 			}
 		} elseif (is_array($object)) {
-			// todo get configuration from TS
 			foreach($object as $key=>$value) {
 				$input .= (string)$value;
 			}
 		}
-		$hash = hash($this->getHashFunction(), $input);
-		if (strlen($hash) > self::HASH_MAX_LENGTH) {
-			$hash = substr($hash, 0, self::HASH_MAX_LENGTH);
-		}
-		return $hash;
+		return $input;
 	}
 
 	/**
+	 * Gets a list of database fields which should be included
+	 * when building a hash
+	 *
 	 * @param $tableName
-	 * @return mixed
+	 * @throws \CPSIT\DuplicateFinder\Configuration\InvalidConfigurationException
+	 * @return \string
 	 */
 	public function getDuplicateHashFields($tableName) {
-		return ArrayUtility::getValueByPath(
-			$this->configuration,
-			'tables/' . $tableName . '/hashFields'
-		);
+		if (isset($this->configuration['tables'][$tableName]['hashFields'])) {
+			return ArrayUtility::getValueByPath(
+				$this->configuration,
+				'tables/' . $tableName . '/hashFields'
+			);
+		} else {
+			throw new InvalidConfigurationException('Hash fields for table ' . $tableName . ' are not configured', 1427630639);
+		}
 	}
 
 	/**
@@ -261,7 +294,6 @@ class DuplicateFinderService implements SingletonInterface {
 	 * @return \array
 	 */
 	public function getDuplicates($hash, $table = NULL, $fieldNames = 'uid') {
-		$rows = array();
 		$andWhere = '';
 		if($table) {
 			$andWhere = ' AND WHERE foreign_table=' . $table;
@@ -282,9 +314,10 @@ class DuplicateFinderService implements SingletonInterface {
 	 * @param \integer $uid
 	 * @param DuplicateInterface $object
 	 * @param \string $hash
+	 * @param \string $fuzzyHash
 	 * return bool
 	 */
-	public function updateHash($object = NULL, $tableName = NULL, $uid = NULL, $hash) {
+	public function updateHash($object = NULL, $tableName = NULL, $uid = NULL, $hash, $fuzzyHash = NULL) {
 		if($object AND $tableName = ReflectionUtility::getTableName($object)) {
 			$uid = $object->getUid();
 			$object->setIsDuplicate(FALSE);
@@ -303,6 +336,10 @@ class DuplicateFinderService implements SingletonInterface {
 				'hash' => $hash,
 				'tstamp' => time()
 			);
+
+			if ($fuzzyHash) {
+				$fieldValues['fuzzy_hash'] = $fuzzyHash;
+			}
 
 			$result = $this->database->exec_INSERTquery(self::HASH_TABLE, $fieldValues);
 			if($result) {
@@ -338,6 +375,27 @@ class DuplicateFinderService implements SingletonInterface {
 	}
 
 	/**
+	 * Get configured fuzzy hash function
+	 *
+	 * @throws \CPSIT\DuplicateFinder\Configuration\InvalidConfigurationException
+	 * @return \string
+	 */
+	public function getFuzzyHashFunction(){
+		$fuzzyHashFunction = ArrayUtility::getValueByPath(
+			$this->configuration,
+			'fuzzyHash/function'
+		);
+		if (function_exists($fuzzyHashFunction)) {
+			return $fuzzyHashFunction;
+		} else {
+			throw new InvalidConfigurationException(
+					'The configured fuzzy hash function ' . $fuzzyHashFunction . ' does not exist',
+					1427637255
+					);
+		}
+	}
+
+	/**
 	 * Find Duplicates for a given table
 	 *
 	 * @param \string $tableName Table name
@@ -355,11 +413,12 @@ class DuplicateFinderService implements SingletonInterface {
 			);
 			if($record) {
 				$hash = $this->getHash($record);
+				$fuzzyHash = $this->getFuzzyHash($record);
 				if ($this->isDuplicate($hash, $tableName)) {
 					$this->setIsDuplicate($tableName, $uid);
 				}
 				if (!$this->isRecordHashed($tableName, $uid)) {
-					$this->updateHash(NULL, $tableName, $uid, $hash);
+					$this->updateHash(NULL, $tableName, $uid, $hash, $fuzzyHash);
 				}
 			}
 		}

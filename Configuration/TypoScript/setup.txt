@@ -7,8 +7,8 @@ module.tx_duplicatefinder {
 			function = sha512
 		}
 		fuzzyHash {
-			// fuzzy hashing is not implemented yet
-			function = ssdeep
+			// fuzzy hashing function. For the default function the library ssdeep is installed has to be installed on your system! 
+			function = ssdeep_fuzzy_hash
 		}
 
 		tables {

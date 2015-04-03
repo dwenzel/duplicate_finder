@@ -127,21 +127,21 @@ class DuplicateFinderService implements SingletonInterface {
 	/**
 	 * Build queue
 	 *
-	 * @param \string $tableName
-	 * @param \integer $length
+	 * @param \string $tableName Name of table to fetch from
+	 * @param \string $fieldNames Comma separated list of field names
+	 * @param \integer $length Limit of query
 	 */
-	public function buildQueue ($tableName, $length = 100) {
-		$res = $this->database->exec_SELECTquery(
-			'uid',$tableName, 'deleted=0 AND (duplicate_hash_id="" OR duplicate_hash_id=0)', '', '', (string)$length
-		);
-		if($res) {
-			$IDs = array();
-			while($row = $this->database->sql_fetch_row($res)) {
-				$IDs[] = $row[0];
-			}
-			$this->queue = $IDs;
+	public function buildQueue ($tableName, $fieldNames, $length = 100) {
+		if ($result = $this->database->exec_SELECTgetRows(
+			'uid,' . $fieldNames,
+			$tableName,
+			'deleted=0 AND (duplicate_hash_id="" OR duplicate_hash_id=0)',
+			'', 
+			'uid', 
+			(string)$length
+		)) {
+			$this->queue = $result;
 		}
-		$this->database->sql_free_result($res);
 	}
 
 	/**
@@ -403,17 +403,18 @@ class DuplicateFinderService implements SingletonInterface {
 	 * @return void
 	 */
 	public function find($tableName, $queueLength = 100) {
-		$this->buildQueue($tableName, $queueLength);
 		$fieldNames = $this->getDuplicateHashFields($tableName);
-		foreach($this->queue as $uid) {
-			$record = $this->database->exec_SELECTgetSingleRow(
-				$fieldNames,
-				$tableName,
-				'uid=' . $uid . ' AND deleted=0'
-			);
-			if($record) {
+		if (!empty($fieldNames)) {
+			$this->buildQueue($tableName, $fieldNames, $queueLength);
+		}
+		if ((bool) $this->queue) {
+			foreach($this->queue as $record) {
+				$uid = $record['uid'];
+				unset($record['uid']);
 				$hash = $this->getHash($record);
-				$fuzzyHash = $this->getFuzzyHash($record);
+				if ($this->isFuzzyHashingEnabled()) {
+					$fuzzyHash = $this->getFuzzyHash($record);
+				}
 				if ($this->isDuplicate($hash, $tableName)) {
 					$this->setIsDuplicate($tableName, $uid);
 				}
@@ -507,6 +508,19 @@ class DuplicateFinderService implements SingletonInterface {
 		if(isset($this->hashTables[$tableName]) AND
 		array_key_exists($hash, $this->hashTables[$tableName])) {
 			return $this->hashTables[$tableName][$hash];
+		}
+		return FALSE;
+	}
+
+	/**
+	 * Tells if fuzzy hashing is enabled
+	 * @return \boolean
+	 */
+	public function isFuzzyHashingEnabled() {
+		if (isset($this->configuration['fuzzyHash']['enabled'])) {
+			return ArrayUtility::getValueByPath(
+						$this->configuration,
+						'fuzzyHash/enabled');
 		}
 		return FALSE;
 	}

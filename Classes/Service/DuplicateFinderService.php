@@ -408,11 +408,12 @@ class DuplicateFinderService implements SingletonInterface {
 			$this->buildQueue($tableName, $fieldNames, $queueLength);
 		}
 		if ((bool) $this->queue) {
+			$doFuzzyHashing = $this->isFuzzyHashingEnabled();
 			foreach($this->queue as $record) {
 				$uid = $record['uid'];
 				unset($record['uid']);
 				$hash = $this->getHash($record);
-				if ($this->isFuzzyHashingEnabled()) {
+				if ($doFuzzyHashing) {
 					$fuzzyHash = $this->getFuzzyHash($record);
 				}
 				if ($this->isDuplicate($hash, $tableName)) {

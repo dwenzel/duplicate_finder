@@ -65,6 +65,14 @@ class DuplicateFinderService implements SingletonInterface {
 	protected $hashTables = array();
 
 	/**
+	 * Duplicate tables
+	 * add one for each database table
+	 *
+	 * @var array
+	 */
+	protected $duplicateTables = array();
+
+	/**
 	 * Database
 	 *
 	 * @var \TYPO3\CMS\Core\Database\DatabaseConnection
@@ -259,15 +267,25 @@ class DuplicateFinderService implements SingletonInterface {
 	 * @return \boolean
 	 */
 	public function isDuplicate($hash, $tableName) {
+		$isDuplicate = FALSE;
 		if(isset($this->hashTables[$tableName])) {
-		 return array_key_exists($hash, $this->hashTables[$tableName]);
+			// lookup transient table
+			if (!$isDuplicate = array_key_exists($hash, $this->hashTables[$tableName])) {
+				// lookup database table
+				$isDuplicate = $this->isHashInDataBase($hash, $tableName);
+			}
 		} else {
-			return $this->database->exec_SELECTcountRows(
+			$isDuplicate = $this->isHashInDataBase($hash, $tableName);
+		}
+		return $isDuplicate;
+	}
+
+	protected function isHashInDataBase($hash, $tableName) {
+		return $this->database->exec_SELECTcountRows(
 				'hash',
 				self::HASH_TABLE,
 				'hash = "' . $hash . '" AND foreign_table = "' . $tableName . '"'
-			);
-		}
+		);
 	}
 
 	/**
@@ -409,6 +427,8 @@ class DuplicateFinderService implements SingletonInterface {
 		}
 		if ((bool) $this->queue) {
 			$doFuzzyHashing = $this->isFuzzyHashingEnabled();
+			$this->addHashTable($tableName);
+			$this->addDuplicateTable($tableName);
 			foreach($this->queue as $record) {
 				$uid = $record['uid'];
 				unset($record['uid']);
@@ -417,12 +437,16 @@ class DuplicateFinderService implements SingletonInterface {
 					$fuzzyHash = $this->getFuzzyHash($record);
 				}
 				if ($this->isDuplicate($hash, $tableName)) {
-					$this->setIsDuplicate($tableName, $uid);
+					$this->addDuplicate($tableName, $uid);
+				} else {
+					$this->addHash($hash, $tableName, $uid);
 				}
 				if (!$this->isRecordHashed($tableName, $uid)) {
+					// @todo gather and update all hashes at once. Can we use exec_INSERTmultipleRows?
 					$this->updateHash(NULL, $tableName, $uid, $hash, $fuzzyHash);
 				}
 			}
+			$this->persistDuplicates($tableName);
 		}
 	}
 
@@ -485,6 +509,17 @@ class DuplicateFinderService implements SingletonInterface {
 	}
 
 	/**
+	 * Adds a (transient) duplicate table if it does not exist
+	 *
+	 * @var \string $tableName
+	 */
+	public function addDuplicateTable($tableName) {
+		if(!array_key_exists($tableName, $this->duplicateTables)) {
+			$this->duplicateTables[$tableName] = array();
+		}
+	}
+
+	/**
 	 * Add hash to a hash table
 	 * The table has to exist. Note: named hash tables are transient (kept in memory)
 	 *
@@ -495,6 +530,19 @@ class DuplicateFinderService implements SingletonInterface {
 	public function addHash($hash, $tableName, $uid = NULL) {
 		if(array_key_exists($tableName, $this->hashTables)) {
 			$this->hashTables[$tableName][$hash] = $uid;
+		}
+	}
+
+	/**
+	 * Add duplicate to a duplicate table
+	 * The table has to exist. Note: named hash tables are transient (kept in memory)
+	 *
+	 * @param \string $tableName
+	 * @param \int $uid Record uid
+	 */
+	public function addDuplicate($tableName, $uid) {
+		if(array_key_exists($tableName, $this->duplicateTables)) {
+			$this->duplicateTables[$tableName][] = $uid;
 		}
 	}
 
@@ -525,4 +573,21 @@ class DuplicateFinderService implements SingletonInterface {
 		}
 		return FALSE;
 	}
+
+	protected function persistDuplicates($tableName) {
+		if (isset($this->duplicateTables[$tableName])) {
+			$duplicates = $this->duplicateTables[$tableName];
+			if ((bool) $duplicates) {
+				$uidList = implode(',', array_unique($duplicates));
+				$this->database->exec_UPDATEquery(
+						$tableName,
+						'uid IN (' . $uidList . ')',
+						array(
+							'is_duplicate' => 1
+						)
+					);
+			}
+		}
+	}
  }
+

@@ -24,6 +24,10 @@ class DuplicateFinderServiceTest extends UnitTestCase {
 		unset($this->fixture);
 	}
 
+	public function dummyHashFunction($argument) {
+		return str_pad('b', self::HASH_MAX_LENGTH, 'a');
+	}
+
 	/**
 	 * @test
 	 * @covers ::getConfiguration
@@ -150,6 +154,25 @@ class DuplicateFinderServiceTest extends UnitTestCase {
 				$expectedHashValue,
 				$fixture->getHash($record)
 				);
+	}
+
+	/**
+	 * @test
+	 * @covers ::cropHash
+	 */
+	public function cropHashLimitsHashLength() {
+		$fixture = $this->getMock(
+				'CPSIT\\DuplicateFinder\\Service\\DuplicateFinderService',
+				array('getHashFunction', 'getHashFieldsContent'), array(), '', FALSE);
+
+		$reflectionObject = new \ReflectionClass('CPSIT\\DuplicateFinder\\Service\\DuplicateFinderService');
+		$maxLength = $reflectionObject->getConstant('HASH_MAX_LENGTH');
+		$tooLongHash = str_pad('barbaz', $maxLength + 1, 'foo');
+		
+		$this->assertEquals(
+				$maxLength,
+				strlen($this->fixture->_call('cropHash', $tooLongHash))
+					);
 	}
 
 	/**
@@ -310,6 +333,128 @@ class DuplicateFinderServiceTest extends UnitTestCase {
 
 	/**
 	 * @test
+	 * @covers ::find
+	 */
+	public function findDoesNotComputeFuzzyHashIfNotConfigured() {
+		$fixture = $this->getAccessibleMock(
+				'CPSIT\\DuplicateFinder\\Service\\DuplicateFinderService',
+				array('getDuplicateHashFields', 'buildQueue', 'getHash', 'getFuzzyHash', 'isDuplicate', 'isRecordHashed'), array(), '', FALSE);
+		$tableName = 'foo';
+		$queueLength = 100; // default value
+		$fieldNames = 'bar';
+		$record = array(
+				'uid' => 1,
+				'fooField' => 'fooFieldValue'
+				);
+		$fixture->_set('configuration', array('fuzzyHash' => 'foo'));
+		$fixture->_set('queue', array($record));
+
+		$fixture->expects($this->once())->method('getDuplicateHashFields');
+		$fixture->expects($this->once())->method('getHash');
+		$fixture->expects($this->never())->method('getFuzzyHash');
+		$fixture->expects($this->once())->method('isDuplicate')
+			->will($this->returnValue(FALSE));
+		$fixture->expects($this->once())->method('isRecordHashed')
+			->will($this->returnValue(TRUE));
+
+		$fixture->find($tableName);
+	}
+
+	/**
+	 * @test
+	 * @covers ::find
+	 */
+	public function findDoesCallGetFuzzyHashIfConfigured() {
+		$fixture = $this->getAccessibleMock(
+				'CPSIT\\DuplicateFinder\\Service\\DuplicateFinderService',
+				array('getDuplicateHashFields', 'buildQueue', 'getHash', 'getFuzzyHash', 'isDuplicate', 'isRecordHashed'), array(), '', FALSE);
+		$tableName = 'foo';
+		$record = array(
+				'uid' => 1,
+				'fooField' => 'fooFieldValue'
+				);
+		$expectedArgument = array(
+				'fooField' => 'fooFieldValue'
+				);
+		$fixture->_set('configuration', array(
+					'fuzzyHash' => array(
+						'enabled' => 1,
+					)));
+		$fixture->_set('queue', array($record));
+
+		$fixture->expects($this->once())->method('getDuplicateHashFields');
+		$fixture->expects($this->once())->method('getHash');
+		$fixture->expects($this->once())->method('getFuzzyHash')
+			->with($expectedArgument);
+		$fixture->expects($this->once())->method('isDuplicate')
+			->will($this->returnValue(FALSE));
+		$fixture->expects($this->once())->method('isRecordHashed')
+			->will($this->returnValue(TRUE));
+
+		$fixture->find($tableName);
+	}
+
+	/**
+	 * @test
+	 * @covers ::find
+	 */
+	public function findAddsDuplicateIfRecordIsDuplicate() {
+		$fixture = $this->getAccessibleMock(
+				'CPSIT\\DuplicateFinder\\Service\\DuplicateFinderService',
+				array('getDuplicateHashFields', 'getHash', 'getFuzzyHash', 'isDuplicate', 'addDuplicate', 'isRecordHashed', 'persistDuplicates'), array(), '', FALSE);
+		$tableName = 'foo';
+		$uid = 15;
+		$record = array(
+				'uid' => $uid,
+				'fooField' => 'fooFieldValue'
+				);
+		$fixture->_set('queue', array($record));
+
+		$fixture->expects($this->once())->method('getDuplicateHashFields');
+		$fixture->expects($this->once())->method('getHash');
+		$fixture->expects($this->once())->method('isDuplicate')
+			->will($this->returnValue(TRUE));
+	
+		$fixture->expects($this->once())->method('addDuplicate')
+				->with($tableName, $uid);
+		
+		$fixture->expects($this->once())->method('isRecordHashed')
+			->will($this->returnValue(TRUE));
+		$fixture->expects($this->once())->method('persistDuplicates');
+		$fixture->find($tableName);
+	}
+
+	/**
+	 * @test
+	 * @covers ::find
+	 */
+	public function findUpdatesHashIfRecordIsNotHashed() {
+		$fixture = $this->getAccessibleMock(
+				'CPSIT\\DuplicateFinder\\Service\\DuplicateFinderService',
+				array('getDuplicateHashFields', 'getHash', 'isDuplicate', 'isRecordHashed', 'updateHash'), array(), '', FALSE);
+		$tableName = 'foo';
+		$uid = 15;
+		$record = array(
+				'uid' => $uid,
+				'fooField' => 'fooFieldValue'
+				);
+		$fixture->_set('queue', array($record));
+		$hash = 'fooHash';
+
+		$fixture->expects($this->once())->method('getDuplicateHashFields');
+		$fixture->expects($this->once())->method('getHash')
+			->will($this->returnValue($hash));
+		
+		$fixture->expects($this->once())->method('isRecordHashed')
+			->will($this->returnValue(FALSE));
+		$fixture->expects($this->once())->method('updateHash')
+			->with(NULL, $tableName, $uid, $hash, NULL);
+
+		$fixture->find($tableName);
+	}
+
+	/**
+	 * @test
 	 * @covers ::isFuzzyHashingEnabled
 	 */
 	public function isFuzzyHashingEnabledReturnsInitiallyFalse() {
@@ -349,31 +494,111 @@ class DuplicateFinderServiceTest extends UnitTestCase {
 
 	/**
 	 * @test
-	 * @covers ::find
+	 * @covers ::isDuplicate
 	 */
-	public function findDoesNotComputeFuzzyHashIfNotConfigured() {
+	public function isDuplicateReturnsInitiallyFalse() {
 		$fixture = $this->getAccessibleMock(
 				'CPSIT\\DuplicateFinder\\Service\\DuplicateFinderService',
-				array('getDuplicateHashFields', 'buildQueue', 'getHash', 'getFuzzyHash', 'isDuplicate', 'isRecordHashed'), array(), '', FALSE);
-		$tableName = 'foo';
-		$queueLength = 100; // default value
-		$fieldNames = 'bar';
-		$record = array(
-				'uid' => 1,
-				'fooField' => 'fooFieldValue'
-				);
-		$fixture->_set('configuration', array('fuzzyHash' => 'foo'));
-		$fixture->_set('queue', array($record));
+				array('isHashInDataBase'), array(), '', FALSE);
+		$fixture->expects($this->once())->method('isHashInDataBase');
 
-		$fixture->expects($this->once())->method('getDuplicateHashFields');
-		$fixture->expects($this->once())->method('getHash');
-		$fixture->expects($this->never())->method('getFuzzyHash');
-		$fixture->expects($this->once())->method('isDuplicate')
-			->will($this->returnValue(FALSE));
-		$fixture->expects($this->once())->method('isRecordHashed')
+		$this->assertFalse(
+				$fixture->isDuplicate('foo', 'bar')
+				);
+	}
+
+	/**
+	 * @test
+	 * @covers ::isDuplicate
+	 */
+	public function isDuplicateReturnsTrueIfHashIsInDataBase() {
+		$fixture = $this->getAccessibleMock(
+				'CPSIT\\DuplicateFinder\\Service\\DuplicateFinderService',
+				array('isHashInDataBase'), array(), '', FALSE);
+		$fixture->expects($this->once())->method('isHashInDataBase')
 			->will($this->returnValue(TRUE));
 
-		$fixture->find($tableName);
+		$this->assertTrue(
+				$fixture->isDuplicate('foo', 'bar')
+				);
+	}
+
+	/**
+	 * @test
+	 * @covers ::isDuplicate
+	 */
+	public function isDuplicateLooksUpDataBaseIfHashIsNotInHashTable() {
+		$fixture = $this->getAccessibleMock(
+				'CPSIT\\DuplicateFinder\\Service\\DuplicateFinderService',
+				array('isHashInDataBase'), array(), '', FALSE);
+		$tableName = 'bar';
+		$fixture->_set(
+				'hashTables',
+				array(
+					$tableName => array(
+						'boo'
+						)
+					)
+				);
+
+		$fixture->expects($this->once())->method('isHashInDataBase')
+			->will($this->returnValue('baz'));
+
+		$this->assertSame(
+				'baz',
+				$fixture->isDuplicate('foo', $tableName)
+				);
+	}
+
+	/**
+	 * @test
+	 * @covers ::isDuplicate
+	 */
+	public function isDuplicateReturnsTrueIfHashIsInHashTable() {
+		$fixture = $this->getAccessibleMock(
+				'CPSIT\\DuplicateFinder\\Service\\DuplicateFinderService',
+				array('isHashInDataBase'), array(), '', FALSE);
+		$tableName = 'bar';
+		$hashValue = 'foo';
+		$fixture->_set(
+				'hashTables',
+				array(
+					$tableName => array(
+						$hashValue => 'baz'
+						)
+					)
+				);
+
+		/*$fixture->expects($this->once())->method('isHashInDataBase')
+			->will($this->returnValue(TRUE));
+*/
+		$this->assertTrue(
+				$fixture->isDuplicate($hashValue, $tableName)
+				);
+	}
+
+	/**
+	 * @test
+	 * @covers ::isDuplicate
+	 */
+	public function isDuplicateDoesNotLookupDataBaseIfHashIsInHashTable() {
+		$fixture = $this->getAccessibleMock(
+				'CPSIT\\DuplicateFinder\\Service\\DuplicateFinderService',
+				array('isHashInDataBase'), array(), '', FALSE);
+		$tableName = 'bar';
+		$hashValue = 'foo';
+		$fixture->_set(
+				'hashTables',
+				array(
+					$tableName => array(
+						$hashValue => 'baz'
+						)
+					)
+				);
+
+		$fixture->expects($this->never())->method('isHashInDataBase');
+
+		$fixture->isDuplicate($hashValue, $tableName);
 	}
 }
 

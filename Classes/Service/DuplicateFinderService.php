@@ -165,10 +165,7 @@ class DuplicateFinderService implements SingletonInterface {
 				$this->getHashFunction(),
 				$this->getHashFieldsContent($object)
 		);
-		if (strlen($hash) > self::HASH_MAX_LENGTH) {
-			$hash = substr($hash, 0, self::HASH_MAX_LENGTH);
-		}
-		return $hash;
+		return $this->cropHash($hash);
 	}
 
 	/**
@@ -274,18 +271,27 @@ class DuplicateFinderService implements SingletonInterface {
 				// lookup database table
 				$isDuplicate = $this->isHashInDataBase($hash, $tableName);
 			}
-		} else {
-			$isDuplicate = $this->isHashInDataBase($hash, $tableName);
+		} elseif ($this->isHashInDataBase($hash, $tableName)) {
+			return TRUE;
 		}
 		return $isDuplicate;
 	}
 
+	/**
+	 * Tells whether a has is in data base
+	 * @param \string $hash
+	 * @param \string $tableName
+	 * @return \boolean
+	 */
 	protected function isHashInDataBase($hash, $tableName) {
-		return $this->database->exec_SELECTcountRows(
+		if($this->database->exec_SELECTcountRows(
 				'hash',
 				self::HASH_TABLE,
 				'hash = "' . $hash . '" AND foreign_table = "' . $tableName . '"'
-		);
+		)) {
+			return TRUE;
+		}
+		return FALSE;
 	}
 
 	/**
@@ -588,6 +594,15 @@ class DuplicateFinderService implements SingletonInterface {
 					);
 			}
 		}
+	}
+	
+	/**
+	 * Crops a string to HASH_MAX_LENGTH
+	 * @param \string $hash
+	 * @return \string
+	 */
+	protected function cropHash($hash) {
+		return substr($hash, 0, self::HASH_MAX_LENGTH);
 	}
  }
 

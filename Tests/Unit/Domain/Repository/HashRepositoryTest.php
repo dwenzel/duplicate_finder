@@ -29,17 +29,14 @@ class HashRepositoryTest extends UnitTestCase {
 	 * @covers ::__construct
 	 */
 	public function constructorSetsDataBase() {
-		$this->markTestSkipped();
 		$GLOBALS['TYPO3_DB'] = $this->getMock(
 				'TYPO3\\CMS\\Core\\Database\\DatabaseConnection',
 				array(), array(), '', FALSE);
-		$fixture = $this->getAccessibleMock(
-				'CPSIT\\DuplicateFinder\\Domain\\Repository\\HashRepository',
-				array('dummy'), array(), '', TRUE);
 
+		$this->fixture->__construct();
 		$this->assertSame(
 				$GLOBALS['TYPO3_DB'],
-				$fixture->_get('database')
+				$this->fixture->_get('database')
 				);
 	}
 

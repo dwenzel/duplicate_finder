@@ -78,7 +78,7 @@ class CachedHashRepository implements SingletonInterface {
 	 */
 	public function containsHashForRecord($tableName, $uid) {
 		if ($this->hasIndexTable($tableName)) {
-				if(isset($this->indexTable[$tableName][$uid])) {
+				if(array_key_exists($uid, $this->indexTables[$tableName])) {
 					return TRUE;
 				}
 		}

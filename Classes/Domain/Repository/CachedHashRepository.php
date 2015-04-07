@@ -1,5 +1,4 @@
 <?php
-
 namespace CPSIT\DuplicateFinder\Domain\Repository;
 
 use TYPO3\CMS\Core\SingletonInterface;
@@ -59,7 +58,7 @@ class CachedHashRepository implements SingletonInterface {
 	 * one for each database table
 	 * @var \array
 	 */
-	protected $indexTables = array(),
+	protected $indexTables = array();
 
 	public function __construct() {
 		if(!$this->hashRepository instanceof HashRepository) {
@@ -147,7 +146,7 @@ class CachedHashRepository implements SingletonInterface {
 	 * @var \string $tableName
 	 */
 	protected function addHashTable($tableName) {
-		if(!this->hasHashTable) {
+		if(!$this->hasHashTable) {
 			$this->hashTables[$tableName] = array();
 		}
 	}
@@ -158,7 +157,7 @@ class CachedHashRepository implements SingletonInterface {
 	 * @var \string $tableName
 	 */
 	protected function addIndexTable($tableName) {
-		if(!this->hasIndexTable) {
+		if(!$this->hasIndexTable) {
 			$this->indexTables[$tableName] = array();
 		}
 	}

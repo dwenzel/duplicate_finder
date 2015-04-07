@@ -133,7 +133,7 @@ class CachedHashRepository implements SingletonInterface {
 	public function clear($tableName = NULL) {
 		if ($tableName) {
 			unset($this->hashTables[$tableName]);
-			$this->hashRepository->removeByTable($tableName);
+			$this->hashRepository->clear($tableName);
 		} else {
 			unset($this->hashTables);
 			$this->hashRepository->clear();

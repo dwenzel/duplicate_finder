@@ -146,7 +146,7 @@ class CachedHashRepository implements SingletonInterface {
 	 * @var \string $tableName
 	 */
 	protected function addHashTable($tableName) {
-		if(!$this->hasHashTable) {
+		if(!$this->hasHashTable($tableName)) {
 			$this->hashTables[$tableName] = array();
 		}
 	}
@@ -157,7 +157,7 @@ class CachedHashRepository implements SingletonInterface {
 	 * @var \string $tableName
 	 */
 	protected function addIndexTable($tableName) {
-		if(!$this->hasIndexTable) {
+		if(!$this->hasIndexTable($tableName)) {
 			$this->indexTables[$tableName] = array();
 		}
 	}
@@ -211,8 +211,8 @@ class CachedHashRepository implements SingletonInterface {
 	 * @return int|FALSE
 	 */
 	public function getUid($hash, $tableName) {
-		if(isset($this->hashTables[$tableName]) AND
-		array_key_exists($hash, $this->hashTables[$tableName])) {
+		if($this->hasHashTable($tableName) AND 
+				array_key_exists($hash, $this->hashTables[$tableName])) {
 			return $this->hashTables[$tableName][$hash];
 		}
 		return FALSE;

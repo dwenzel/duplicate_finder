@@ -126,29 +126,24 @@ class CachedHashRepositoryTest extends UnitTestCase {
 	 * @covers ::contains
 	 */
 	public function containsReturnsUncachedResultIfHashIsNotInHashTable() {
-		$fixture = $this->getAccessibleMock(
-				'CPSIT\\DuplicateFinder\\Domain\\Repository\\CachedHashRepository',
-				array('hasHashTable'), array(), '', FALSE);
 		$mockHashRepository = $this->getMock(
 				'CPSIT\\DuplicateFinder\\Domain\\Repository\\HashRepository',
 				array('contains'), array(), '', FALSE);
-		$fixture->_set('hashRepository', $mockHashRepository);
+		$this->fixture->_set('hashRepository', $mockHashRepository);
 		$tableName = 'foo';
 		$hash = 'bar';
-		$hashTable = array(
+		$hashTables = array(
 				$tableName => array(
 					'baz' => 5
 					)
 				);
-		$fixture->_set('hashTables', $hashTable);
+		$this->fixture->_set('hashTables', $hashTables);
 
-		$fixture->expects($this->once())->method('hasHashTable')
-			->with($tableName);
 		$mockHashRepository->expects($this->once())->method('contains')
 			->with($hash, $tableName)
 			->will($this->returnValue(TRUE));
 		$this->assertTrue(
-			$fixture->contains($hash, $tableName)
+			$this->fixture->contains($hash, $tableName)
 			);
 	}
 

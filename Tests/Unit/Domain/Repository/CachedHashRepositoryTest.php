@@ -243,5 +243,218 @@ class CachedHashRepositoryTest extends UnitTestCase {
 				$this->fixture->_get('hashTables')
 				);
 	}
+	
+	/**
+	 * @test
+	 * @covers ::addHashTable
+	 */
+	public function addHashTableDoesNotAddTableIfItAlreadyExists() {
+		$fixture = $this->getAccessibleMock(
+				'CPSIT\\DuplicateFinder\\Domain\\Repository\\CachedHashRepository',
+				array('hasHashTable'), array(), '', FALSE);
+		$tableName = 'foo';
+		$hashTables = array();
 
+		$fixture->expects($this->once())->method('hasHashTable')
+			->with($tableName)
+			->will($this->returnValue(TRUE));
+
+		$fixture->_call('addHashTable', $tableName);
+
+		$this->assertEquals(
+				$hashTables,
+				$fixture->_get('hashTables')
+				);
+	}
+	
+	/**
+	 * @test
+	 * @covers ::addHashTable
+	 */
+	public function addHashTableForStringAddsTable() {
+		$tableName = 'foo';
+		$expectedHashTables = array(
+				$tableName => array()
+				);
+		$this->fixture->_call('addHashTable', $tableName);
+
+		$this->assertSame(
+				$expectedHashTables,
+				$this->fixture->_get('hashTables')
+				);
+	}
+	
+	/**
+	 * @test
+	 * @covers ::addIndexTable
+	 */
+	public function addIndexTableDoesNotAddTableIfItAlreadyExists() {
+		$fixture = $this->getAccessibleMock(
+				'CPSIT\\DuplicateFinder\\Domain\\Repository\\CachedHashRepository',
+				array('hasIndexTable'), array(), '', FALSE);
+		$tableName = 'foo';
+		$indexTables = array();
+
+		$fixture->expects($this->once())->method('hasIndexTable')
+			->with($tableName)
+			->will($this->returnValue(TRUE));
+
+		$fixture->_call('addIndexTable', $tableName);
+
+		$this->assertEquals(
+				$indexTables,
+				$fixture->_get('indexTables')
+				);
+	}
+	
+	/**
+	 * @test
+	 * @covers ::addIndexTable
+	 */
+	public function addIndexTableForStringAddsTable() {
+		$tableName = 'foo';
+		$expectedIndexTables = array(
+				$tableName => array()
+				);
+		$this->fixture->_call('addIndexTable', $tableName);
+
+		$this->assertSame(
+				$expectedIndexTables,
+				$this->fixture->_get('indexTables')
+				);
+	}
+
+	/**
+	 * @test
+	 * @covers ::add
+	 */
+	public function addAddsHashTableIfItDoesNotExist() {
+		$tableName = 'foo';
+		$hash = 'bar';
+		$uid = 3;
+
+		$this->fixture->add($hash, $tableName, $uid);
+
+		$this->assertTrue(
+				$this->fixture->_call('hasHashTable', $tableName)
+				);
+	}
+
+	/**
+	 * @test
+	 * @covers ::add
+	 */
+	public function addAddsHash() {
+		$tableName = 'foo';
+		$hash = 'bar';
+		$uid = 3;
+		$expectedHashTables = array(
+				$tableName => array(
+					$hash => $uid
+					)
+				);
+		$this->fixture->add($hash, $tableName, $uid);
+
+		$this->assertSame(
+				$expectedHashTables,
+				$this->fixture->_get('hashTables')
+				);
+	}
+
+	/**
+	 * @test
+	 * @covers ::add
+	 */
+	public function addDoesNotAddIndexIfNoUidGiven() {
+		$tableName = 'foo';
+		$hash = 'bar';
+		$expectedIndexTables = array();
+		$this->fixture->add($hash, $tableName);
+
+		$this->assertSame(
+				$expectedIndexTables,
+				$this->fixture->_get('indexTables')
+				);
+	}
+
+	/**
+	 * @test
+	 * @covers ::add
+	 */
+	public function addAddsIndexTableIfItDoesNotExist() {
+		$tableName = 'foo';
+		$hash = 'bar';
+		$uid = 3;
+
+		$this->fixture->add($hash, $tableName, $uid);
+
+		$this->assertTrue(
+				$this->fixture->_call('hasIndexTable', $tableName)
+				);
+	}
+
+	/**
+	 * @test
+	 * @covers ::add
+	 */
+	public function addAddsIndex() {
+		$tableName = 'foo';
+		$hash = 'bar';
+		$uid = 3;
+		$expectedIndexTables = array(
+				$tableName => array(
+					$uid => $hash
+					)
+				);
+		$this->fixture->add($hash, $tableName, $uid);
+
+		$this->assertSame(
+				$expectedIndexTables,
+				$this->fixture->_get('indexTables')
+				);
+	}
+
+	/**
+	 * @test
+	 * @covers ::getUid
+	 */
+	public function getUidReturnsInitiallyFalse() {
+		$hash = 'bar';
+		$tableName = 'foo';
+		$this->assertFalse(
+				$this->fixture->getUid($hash, $tableName)
+				);
+	}
+
+	/**
+	 * @test
+	 * @covers ::getUid
+	 */
+	public function getUidReturnsFalseIfHashIsNotInHashTable() {
+		$notExistingHash = 'bar';
+		$tableName = 'foo';
+		$this->assertFalse(
+				$this->fixture->getUid($notExistingHash, $tableName)
+				);
+	}
+
+	/**
+	 * @test
+	 * @covers ::getUid
+	 */
+	public function getUidReturnsUidIfHashIsInHashTable() {
+		$hash = 'bar';
+		$tableName = 'foo';
+		$uid = 5;
+		$hashTables = array(
+				$tableName => array(
+					$hash => $uid
+					)
+				);
+		$this->fixture->_set('hashTables', $hashTables);
+		$this->assertSame(
+				$uid,
+				$this->fixture->getUid($hash, $tableName)
+				);
+	}
 }

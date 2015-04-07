@@ -95,7 +95,7 @@ class CachedHashRepository implements SingletonInterface {
 	 */
 	public function contains($hash, $tableName) {
 		$contains = FALSE;
-		if(isset($this->hashTables[$tableName])) {
+		if($this->hasHashTable($tableName)) {
 			// lookup transient table
 			if (!$contains = array_key_exists($hash, $this->hashTables[$tableName])) {
 				// lookup database table

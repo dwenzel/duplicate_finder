@@ -164,13 +164,13 @@ class DuplicateFinderService implements SingletonInterface {
 	 * Please be aware that we limit the length of the
 	 * hash string to 64 characters
 	 *
-	 * @param \CPSIT\DuplicateFinder\Domain\Model\DuplicateInterface|\array $object
+	 * @param \array $record
 	 * @return \string
 	 */
-	public function getHash($object) {
+	public function getHash($record) {
 		$hash = hash(
 				$this->getHashFunction(),
-				$this->getHashFieldsContent($object)
+				$this->getHashFieldsContent($record)
 		);
 		return $this->cropHash($hash);
 	}
@@ -178,33 +178,26 @@ class DuplicateFinderService implements SingletonInterface {
 	/**
 	 * Gets a fuzzy hash value over configured fields
 	 *
-	 * @param \CPSIT\DuplicateFinder\Domain\Model\DuplicateInterface|\array $object
+	 * @param \array $record
 	 * @return \string
 	 */
-	public function getFuzzyHash($object) {
+	public function getFuzzyHash($record) {
 		return call_user_func(
 				$this->getFuzzyHashFunction(), 
-				$this->getHashFieldsContent($object)
+				$this->getHashFieldsContent($record)
 			);
 	}
 
 	/**
 	 * Gets the content of the hash fields
 	 *
-	 * @param \CPSIT\DuplicateFinder\Domain\Model\DuplicateInterface|\array $object
+	 * @param array $record
 	 * @return \string
 	 */
-	protected function getHashFieldsContent($object) {
+	protected function getHashFieldsContent($record) {
 		$input = '';
-		if(is_object($object)) {
-			$fields = GeneralUtility::trimExplode(',', $this->getDuplicateHashFields($object), TRUE);
-			foreach($fields as $field) {
-				if(ObjectAccess::isPropertyGettable($object, $field)) {
-					$input .= (string)ObjectAccess::getProperty($object, $field);
-				}
-			}
-		} elseif (is_array($object)) {
-			foreach($object as $key=>$value) {
+		if ((bool)$record) {
+			foreach($record as $key=>$value) {
 				$input .= (string)$value;
 			}
 		}

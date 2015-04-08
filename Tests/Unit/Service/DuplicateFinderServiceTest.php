@@ -106,7 +106,7 @@ class DuplicateFinderServiceTest extends UnitTestCase {
 	public function getHashFieldsContentForStringReturnsEmptyString() {
 		$this->assertSame(
 				'',
-				$this->fixture->_call('getHashFieldsContent', 'foo')
+				$this->fixture->_call('getHashFieldsContent', array())
 				);
 	}
 

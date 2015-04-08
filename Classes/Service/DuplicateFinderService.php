@@ -332,7 +332,7 @@ class DuplicateFinderService implements SingletonInterface {
 				}
 				if (!$this->hashRepository->containsHashForRecord($tableName, $uid)) {
 					// @todo gather and update all hashes at once. Can we use exec_INSERTmultipleRows?
-					$this->hashRepository->update(NULL, $tableName, $uid, $hash, $fuzzyHash);
+					$this->hashRepository->update($tableName, $uid, $hash, $fuzzyHash);
 				}
 			}
 			$this->persistDuplicates($tableName);

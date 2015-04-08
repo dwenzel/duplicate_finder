@@ -36,7 +36,8 @@ use TYPO3\CMS\Core\Utility\ArrayUtility;
  * @license http://www.gnu.org/licenses/gpl.html GNU General Public License, version 3 or later
  *
  */
- 
+use \TYPO3\CMS\Core\Utility\GeneralUtility;
+
 class CachedHashRepository implements SingletonInterface {
 	/**
 	 * Hash repository

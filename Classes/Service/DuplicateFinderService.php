@@ -325,7 +325,7 @@ class DuplicateFinderService implements SingletonInterface {
 				if ($doFuzzyHashing) {
 					$fuzzyHash = $this->getFuzzyHash($record);
 				}
-				if ($this->isDuplicate($hash, $tableName)) {
+				if ($this->hashRepository->contains($hash, $tableName)) {
 					$this->addDuplicate($tableName, $uid);
 				} else {
 					$this->hashRepository->add($hash, $tableName, $uid);

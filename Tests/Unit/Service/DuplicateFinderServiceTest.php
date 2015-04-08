@@ -337,7 +337,7 @@ class DuplicateFinderServiceTest extends UnitTestCase {
 				array('getDuplicateHashFields', 'buildQueue', 'getHash', 'getFuzzyHash', 'isDuplicate', 'isRecordHashed'), array(), '', FALSE);
 		$mockRepository = $this->getMock(
 				'CPSIT\\DuplicateFinder\\Domain\\Repository\\CachedHashRepository',
-				array('containsHashForRecord'), array(), '', FALSE);
+				array('containsHashForRecord', 'contains'), array(), '', FALSE);
 		$fixture->_set('hashRepository', $mockRepository);
 		$tableName = 'foo';
 		$queueLength = 100; // default value
@@ -352,7 +352,7 @@ class DuplicateFinderServiceTest extends UnitTestCase {
 		$fixture->expects($this->once())->method('getDuplicateHashFields');
 		$fixture->expects($this->once())->method('getHash');
 		$fixture->expects($this->never())->method('getFuzzyHash');
-		$fixture->expects($this->once())->method('isDuplicate')
+		$mockRepository->expects($this->once())->method('contains')
 			->will($this->returnValue(FALSE));
 		$mockRepository->expects($this->once())->method('containsHashForRecord')
 			->will($this->returnValue(TRUE));
@@ -370,7 +370,7 @@ class DuplicateFinderServiceTest extends UnitTestCase {
 				array('getDuplicateHashFields', 'buildQueue', 'getHash', 'getFuzzyHash', 'isDuplicate'), array(), '', FALSE);
 		$mockRepository = $this->getMock(
 				'CPSIT\\DuplicateFinder\\Domain\\Repository\\CachedHashRepository',
-				array('containsHashForRecord'), array(), '', FALSE);
+				array('containsHashForRecord', 'contains'), array(), '', FALSE);
 		$fixture->_set('hashRepository', $mockRepository);
 		$tableName = 'foo';
 		$record = array(
@@ -390,7 +390,7 @@ class DuplicateFinderServiceTest extends UnitTestCase {
 		$fixture->expects($this->once())->method('getHash');
 		$fixture->expects($this->once())->method('getFuzzyHash')
 			->with($expectedArgument);
-		$fixture->expects($this->once())->method('isDuplicate')
+		$mockRepository->expects($this->once())->method('contains')
 			->will($this->returnValue(FALSE));
 		$mockRepository->expects($this->once())->method('containsHashForRecord')
 			->will($this->returnValue(TRUE));
@@ -405,10 +405,10 @@ class DuplicateFinderServiceTest extends UnitTestCase {
 	public function findAddsDuplicateIfRecordIsDuplicate() {
 		$fixture = $this->getAccessibleMock(
 				'CPSIT\\DuplicateFinder\\Service\\DuplicateFinderService',
-				array('getDuplicateHashFields', 'getHash', 'getFuzzyHash', 'isDuplicate', 'addDuplicate', 'persistDuplicates'), array(), '', FALSE);
+				array('getDuplicateHashFields', 'getHash', 'getFuzzyHash', 'addDuplicate', 'persistDuplicates'), array(), '', FALSE);
 		$mockRepository = $this->getMock(
 				'CPSIT\\DuplicateFinder\\Domain\\Repository\\CachedHashRepository',
-				array('containsHashForRecord'), array(), '', FALSE);
+				array('containsHashForRecord', 'contains'), array(), '', FALSE);
 		$fixture->_set('hashRepository', $mockRepository);
 		$tableName = 'foo';
 		$uid = 15;
@@ -420,7 +420,7 @@ class DuplicateFinderServiceTest extends UnitTestCase {
 
 		$fixture->expects($this->once())->method('getDuplicateHashFields');
 		$fixture->expects($this->once())->method('getHash');
-		$fixture->expects($this->once())->method('isDuplicate')
+		$mockRepository->expects($this->once())->method('contains')
 			->will($this->returnValue(TRUE));
 	
 		$fixture->expects($this->once())->method('addDuplicate')
@@ -439,10 +439,10 @@ class DuplicateFinderServiceTest extends UnitTestCase {
 	public function findUpdatesHashIfRecordIsNotHashed() {
 		$fixture = $this->getAccessibleMock(
 				'CPSIT\\DuplicateFinder\\Service\\DuplicateFinderService',
-				array('getDuplicateHashFields', 'getHash', 'isDuplicate'), array(), '', FALSE);
+				array('getDuplicateHashFields', 'getHash'), array(), '', FALSE);
 		$mockRepository = $this->getMock(
 				'CPSIT\\DuplicateFinder\\Domain\\Repository\\CachedHashRepository',
-				array('containsHashForRecord', 'update'), array(), '', FALSE);
+				array('containsHashForRecord', 'contains', 'update'), array(), '', FALSE);
 		$fixture->_set('hashRepository', $mockRepository);
 		$tableName = 'foo';
 		$uid = 15;
@@ -457,6 +457,8 @@ class DuplicateFinderServiceTest extends UnitTestCase {
 		$fixture->expects($this->once())->method('getHash')
 			->will($this->returnValue($hash));
 		
+		$mockRepository->expects($this->once())->method('contains')
+			->will($this->returnValue(FALSE));
 		$mockRepository->expects($this->once())->method('containsHashForRecord')
 			->will($this->returnValue(FALSE));
 		$mockRepository->expects($this->once())->method('update')
@@ -502,6 +504,24 @@ class DuplicateFinderServiceTest extends UnitTestCase {
 		$this->assertTrue(
 				$this->fixture->isFuzzyHashingEnabled()
 				);
+	}
+
+	/**
+	 * @test
+	 * @covers ::isDuplicate
+	 */
+	public function isDuplicateCallsHashRepository() {
+		$mockRepository = $this->getMock(
+				'CPSIT\\DuplicateFinder\\Domain\\Repository\\CachedHashRepository',
+				array('contains'), array(), '', FALSE);
+		$this->fixture->_set('hashRepository', $mockRepository);
+		$hash = 'foo';
+		$tableName = 'bar';
+
+		$mockRepository->expects($this->once())->method('contains')
+			->with($hash, $tableName);
+
+		$this->fixture->isDuplicate($hash, $tableName);
 	}
 }
 

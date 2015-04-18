@@ -462,7 +462,7 @@ class DuplicateFinderServiceTest extends UnitTestCase {
 		$mockRepository->expects($this->once())->method('containsHashForRecord')
 			->will($this->returnValue(FALSE));
 		$mockRepository->expects($this->once())->method('update')
-			->with(NULL, $tableName, $uid, $hash, NULL);
+			->with($tableName, $uid, $hash, NULL);
 
 		$fixture->find($tableName);
 	}

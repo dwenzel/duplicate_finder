@@ -382,7 +382,7 @@ class DuplicateFinderService implements SingletonInterface {
 	 */
 	public function isFuzzyHashingEnabled() {
 		if (isset($this->configuration['fuzzyHash']['enabled'])) {
-			return ArrayUtility::getValueByPath(
+			return (bool)ArrayUtility::getValueByPath(
 						$this->configuration,
 						'fuzzyHash/enabled');
 		}

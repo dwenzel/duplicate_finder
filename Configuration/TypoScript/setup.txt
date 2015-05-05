@@ -7,7 +7,7 @@ module.tx_duplicatefinder {
 			function = sha512
 		}
 		fuzzyHash {
-			enabled = FALSE
+			enabled = 0
 			// fuzzy hashing function. For the default function the library ssdeep is installed has to be installed on your system! 
 			function = ssdeep_fuzzy_hash
 		}

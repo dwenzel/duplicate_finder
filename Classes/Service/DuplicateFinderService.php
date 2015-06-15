@@ -113,6 +113,7 @@ class DuplicateFinderService implements SingletonInterface {
 			$this->configurationManager = $objectManager->get('TYPO3\\CMS\\Extbase\\Configuration\\ConfigurationManager');
 		}
 		if(empty($this->configuration)) {
+			/** @var \TYPO3\CMS\Extbase\Service\TypoScriptService $typoScriptService */
 			$typoScriptService = GeneralUtility::makeInstance('TYPO3\\CMS\\Extbase\\Service\\TypoScriptService');
 			$fullTypoScript = $this->configurationManager->getConfiguration(ConfigurationManagerInterface::CONFIGURATION_TYPE_FULL_TYPOSCRIPT);
 			$fullTypoScript= $typoScriptService->convertTypoScriptArrayToPlainArray($fullTypoScript);
@@ -382,7 +383,7 @@ class DuplicateFinderService implements SingletonInterface {
 	 */
 	public function isFuzzyHashingEnabled() {
 		if (isset($this->configuration['fuzzyHash']['enabled'])) {
-			return ArrayUtility::getValueByPath(
+			return (bool)ArrayUtility::getValueByPath(
 						$this->configuration,
 						'fuzzyHash/enabled');
 		}

@@ -4,10 +4,10 @@ module.tx_duplicatefinder {
 			// a string indicating the hash function to use
 			// please make sure, this function exists on your system
 			// for instance using php function hash_algos()
-			function = sha512
+			function = sha256
 		}
 		fuzzyHash {
-			enabled = FALSE
+			enabled = 0
 			// fuzzy hashing function. For the default function the library ssdeep is installed has to be installed on your system! 
 			function = ssdeep_fuzzy_hash
 		}

@@ -3,7 +3,6 @@
 namespace CPSIT\DuplicateFinder\Service;
 
 use CPSIT\DuplicateFinder\Domain\Model\DuplicateInterface;
-use CPSIT\DuplicateFinder\Utility\ReflectionUtility;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -11,6 +10,7 @@ use TYPO3\CMS\Extbase\Configuration\ConfigurationManager;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface;
 use TYPO3\CMS\Extbase\Object\ObjectManager;
 use TYPO3\CMS\Extbase\Reflection\ObjectAccess;
+use CPSIT\DuplicateFinder\Configuration\InvalidConfigurationException;
 
 /***************************************************************
  *  Copyright notice
@@ -38,23 +38,17 @@ use TYPO3\CMS\Extbase\Reflection\ObjectAccess;
 /**
  *	Duplicate finder service
  *
- * Find duplicate courses by comparing their hashes
+ * Find duplicate records by comparing their hashes
  * @author Dirk Wenzel dirk.wenzel@cps-it.de>
- * @package wis_import_courses
+ * @package duplicate_finder
  * @license http://www.gnu.org/licenses/gpl.html GNU General Public License, version 3 or later
  *
  */
- 
+use \CPSIT\DuplicateFinder\Domain\Repository\CachedHashRepository;
+
 class DuplicateFinderService implements SingletonInterface {
 	const HASH_TABLE = 'tx_duplicatefinder_duplicate_hash';
 	const HASH_MAX_LENGTH = 64;
-
-	/**
-	 * Course repository
-	 *
-	 * @var \CPSIT\WisPascourse\Domain\Repository\CourseRepository
-	 */
-	protected $courseRepository;
 
 	/**
 	 * Configuration Manager
@@ -64,12 +58,20 @@ class DuplicateFinderService implements SingletonInterface {
 	protected $configurationManager;
 
 	/**
-	 * Hash tables
+	 * Cached hash repository
+	 *
+	 * @var \CPSIT\DuplicateFinder\Domain\Repository\CachedHashRepository
+	 * @inject
+	 */
+	protected $hashRepository;
+
+	/**
+	 * Duplicate tables
 	 * add one for each database table
 	 *
 	 * @var array
 	 */
-	protected $hashTables = array();
+	protected $duplicateTables = array();
 
 	/**
 	 * Database
@@ -91,30 +93,46 @@ class DuplicateFinderService implements SingletonInterface {
 	protected $queue;
 
 	public function __construct() {
-		if(!$this->database instanceof \TYPO3\CMS\Core\Database\DatabaseConnection) {
+		if (!$this->database instanceof \TYPO3\CMS\Core\Database\DatabaseConnection) {
 			$this->database = $GLOBALS['TYPO3_DB'];
 		}
+			/** @var ObjectManager $objectManager */
+			$objectManager = GeneralUtility::makeInstance('TYPO3\\CMS\\Extbase\\Object\\ObjectManager');
+		if (!$this->hashRepository instanceof CachedHashRepository) {
+			$this->hashRepository = $objectManager->get(
+					'CPSIT\\DuplicateFinder\\Domain\\Repository\\CachedHashRepository'
+					);
+		}
+
 		/**
 		 * todo All this is only necessary if extbase is not initialized, for instance when calling
 		 * DuplicateFinder via scheduler task. We should try and find a simpler way to read
 		 * configuration.
 		 */
 		if(!$this->configurationManager instanceof ConfigurationManager) {
-			/** @var ObjectManager $objectManager */
-			$objectManager = GeneralUtility::makeInstance('TYPO3\\CMS\\Extbase\\Object\\ObjectManager');
 			$this->configurationManager = $objectManager->get('TYPO3\\CMS\\Extbase\\Configuration\\ConfigurationManager');
 		}
 		if(empty($this->configuration)) {
+			/** @var \TYPO3\CMS\Extbase\Service\TypoScriptService $typoScriptService */
 			$typoScriptService = GeneralUtility::makeInstance('TYPO3\\CMS\\Extbase\\Service\\TypoScriptService');
 			$fullTypoScript = $this->configurationManager->getConfiguration(ConfigurationManagerInterface::CONFIGURATION_TYPE_FULL_TYPOSCRIPT);
 			$fullTypoScript= $typoScriptService->convertTypoScriptArrayToPlainArray($fullTypoScript);
 			$this->setConfiguration(ArrayUtility::getValueByPath($fullTypoScript, 'module/tx_duplicatefinder/settings'));
 		}
 	}
+	
+	/**
+	 * Gets the configuration
+	 *
+	 * @return \array | NULL
+	 */
+	public function getConfiguration() {
+		return $this->configuration;
+	}
 
 	/**
 	 * Set configuration
-	 * See TS module.tx_duplicatefinder.settings.duplicateFinder for a valid example
+	 * See TS module.tx_duplicatefinder.settings for a valid example
 	 *
 	 * @param \array $configuration An array containing a valid configuration.
 	 */
@@ -125,97 +143,85 @@ class DuplicateFinderService implements SingletonInterface {
 	/**
 	 * Build queue
 	 *
-	 * @param \string $tableName
-	 * @param \integer $length
+	 * @param \string $tableName Name of table to fetch from
+	 * @param \string $fieldNames Comma separated list of field names
+	 * @param \integer $length Limit of query
 	 */
-	public function buildQueue ($tableName, $length = 100) {
-		$res = $this->database->exec_SELECTquery(
-			'uid',$tableName, 'deleted=0 AND (duplicate_hash_id="" OR duplicate_hash_id=0)', '', '', (string)$length
-		);
-		if($res) {
-			$IDs = array();
-			while($row = $this->database->sql_fetch_row($res)) {
-				$IDs[] = $row[0];
-			}
-			$this->queue = $IDs;
+	public function buildQueue ($tableName, $fieldNames, $length = 100) {
+		if ($result = $this->database->exec_SELECTgetRows(
+			'uid,' . $fieldNames,
+			$tableName,
+			'deleted=0 AND (duplicate_hash_id="" OR duplicate_hash_id=0)',
+			'', 
+			'uid', 
+			(string)$length
+		)) {
+			$this->queue = $result;
 		}
-		$this->database->sql_free_result($res);
 	}
 
 	/**
 	 * Gets a hash value over configured fields
 	 * Please be aware that we limit the length of the
 	 * hash string to 64 characters
-
-
-*
-*@param \CPSIT\DuplicateFinder\Domain\Model\DuplicateInterface|\array $object
+	 *
+	 * @param \array $record
 	 * @return \string
 	 */
-	public function getHash($object) {
+	public function getHash($record) {
+		$hash = hash(
+				$this->getHashFunction(),
+				$this->getHashFieldsContent($record)
+		);
+		return $this->cropHash($hash);
+	}
+
+	/**
+	 * Gets a fuzzy hash value over configured fields
+	 *
+	 * @param \array $record
+	 * @return \string
+	 */
+	public function getFuzzyHash($record) {
+		return call_user_func(
+				$this->getFuzzyHashFunction(), 
+				$this->getHashFieldsContent($record)
+			);
+	}
+
+	/**
+	 * Gets the content of the hash fields
+	 *
+	 * @param array $record
+	 * @return \string
+	 */
+	protected function getHashFieldsContent($record) {
 		$input = '';
-		if(is_object($object)) {
-			$fields = GeneralUtility::trimExplode(',', $this->getDuplicateHashFields($object), TRUE);
-			foreach($fields as $field) {
-				if(ObjectAccess::isPropertyGettable($object, $field)) {
-					$input .= (string)ObjectAccess::getProperty($object, $field);
-				}
-			}
-		} elseif (is_array($object)) {
-			// todo get configuration from TS
-			foreach($object as $key=>$value) {
+		if ((bool)$record) {
+			foreach($record as $key=>$value) {
 				$input .= (string)$value;
 			}
 		}
-		$hash = hash($this->getHashFunction(), $input);
-		if (strlen($hash) > self::HASH_MAX_LENGTH) {
-			$hash = substr($hash, 0, self::HASH_MAX_LENGTH);
-		}
-		return $hash;
+		return $input;
 	}
 
 	/**
-	 * @param $className
-	 * @return mixed
-	 */
-	public function getDuplicateHashFields($className) {
-		return ArrayUtility::getValueByPath(
-			$this->configuration,
-			'classes/' . $className . '/hashFields'
-		);
-	}
-
-	/**
-	 * Returns whether a given record is already hashed.
-	 * I.e. is in hash table.
+	 * Gets a list of database fields which should be included
+	 * when building a hash
 	 *
-	 * @param \string $tableName
-	 * @param \integer $uid
-	 * @return \bool
+	 * @param $tableName
+	 * @throws \CPSIT\DuplicateFinder\Configuration\InvalidConfigurationException
+	 * @return \string
 	 */
-	public function isRecordHashed($tableName, $uid) {
-		$result = $this->database->exec_SELECTcountRows(
-			'foreign_uid',
-			self::HASH_TABLE,
-			'foreign_uid="' . $uid . '" AND foreign_table="' . $tableName . '"');
-		return ($result) ? TRUE : FALSE;
-	}
-
-	/**
-	 * Tells whether an object is hashed.
-	 * Its duplicateHash property must be set and it has to
-	 * be found in the hash table
-	 *
-	 * @param DuplicateInterface $object
-	 * @return \boolean
-	 */
-	public function isObjectHashed($object) {
-		if (!$object->getDuplicateHashId()) {
-			$uid = $object->getUid();
-			$tableName = ReflectionUtility::getTableName($object);
-			return $this->isRecordHashed($tableName, $uid);
+	public function getDuplicateHashFields($tableName) {
+		if (isset($this->configuration['tables'][$tableName]['hashFields'])) {
+			return ArrayUtility::getValueByPath(
+				$this->configuration,
+				'tables/' . $tableName . '/hashFields'
+			);
+		} else {
+			throw new InvalidConfigurationException('Hash fields for table ' . $tableName . ' are not configured', 1427630639);
 		}
-		return FALSE;
 	}
 
 	/**
@@ -226,15 +232,7 @@ class DuplicateFinderService implements SingletonInterface {
 	 * @return \boolean
 	 */
 	public function isDuplicate($hash, $tableName) {
-		if(isset($this->hashTables[$tableName])) {
-		 return array_key_exists($hash, $this->hashTables[$tableName]);
-		} else {
-			return $this->database->exec_SELECTcountRows(
-				'hash',
-				self::HASH_TABLE,
-				'hash = "' . $hash . '" AND foreign_table = "' . $tableName . '"'
-			);
-		}
+		return $this->hashRepository->contains($hash, $tableName);
 	}
 
 	/**
@@ -261,7 +259,6 @@ class DuplicateFinderService implements SingletonInterface {
 	 * @return \array
 	 */
 	public function getDuplicates($hash, $table = NULL, $fieldNames = 'uid') {
-		$rows = array();
 		$andWhere = '';
 		if($table) {
 			$andWhere = ' AND WHERE foreign_table=' . $table;
@@ -272,57 +269,6 @@ class DuplicateFinderService implements SingletonInterface {
 			'hash = "' . $hash . '"' . $andWhere
 		);
 		return $result;
-	}
-
-	/**
-	 * Update hash in hash table
-	 * If an object is given its hash will be computed and stored in the database.
-	 *
-	 * @param \string $tableName
-	 * @param \integer $uid
-	 * @param DuplicateInterface $object
-	 * @param \string $hash
-	 * return bool
-	 */
-	public function updateHash($object = NULL, $tableName = NULL, $uid = NULL, $hash) {
-		if($object AND $tableName = ReflectionUtility::getTableName($object)) {
-			$uid = $object->getUid();
-			$object->setIsDuplicate(FALSE);
-			$hash = $this->getHash($object);
-		}
-		if ($tableName AND $uid) {
-			//remove existing entries
-			$this->database->exec_DELETEquery(
-				self::HASH_TABLE,
-				'foreign_uid = "' . $uid . '" AND foreign_table="' . $tableName . '"'
-			);
-
-			$fieldValues = array(
-				'foreign_uid' => $uid,
-				'foreign_table' => $tableName,
-				'hash' => $hash,
-				'tstamp' => time()
-			);
-
-			$result = $this->database->exec_INSERTquery(self::HASH_TABLE, $fieldValues);
-			if($result) {
-				$duplicateHashId = $this->database->sql_insert_id();
-				if($object) {
-					// update object @todo do we have to persist manually?
-					$object->setDuplicateHashId($duplicateHashId);
-				} else{
-					// update record by table and uid
-					$this->database->exec_UPDATEquery(
-						$tableName,
-						'uid=' . $uid,
-						array(
-							'duplicate_hash_id' => $duplicateHashId
-						)
-					);
-				}
-				$this->database->sql_free_result($result);
-			}
-		}
 	}
 
 	/**
@@ -338,33 +284,59 @@ class DuplicateFinderService implements SingletonInterface {
 	}
 
 	/**
+	 * Get configured fuzzy hash function
+	 *
+	 * @throws \CPSIT\DuplicateFinder\Configuration\InvalidConfigurationException
+	 * @return \string
+	 */
+	public function getFuzzyHashFunction(){
+		$fuzzyHashFunction = ArrayUtility::getValueByPath(
+			$this->configuration,
+			'fuzzyHash/function'
+		);
+		if (function_exists($fuzzyHashFunction)) {
+			return $fuzzyHashFunction;
+		} else {
+			throw new InvalidConfigurationException(
+					'The configured fuzzy hash function ' . $fuzzyHashFunction . ' does not exist',
+					1427637255
+					);
+		}
+	}
+
+	/**
 	 * Find Duplicates for a given table
 	 *
-	 * @param \string $className Fully qualified class name
+	 * @param \string $tableName Table name
 	 * @param \int $queueLength How many record should be processed at once.
 	 * @return void
 	 */
-	public function find($className, $queueLength = 100) {
-		$object = new $className();
-		$tableName = ReflectionUtility::getTableName($object);
-		$fieldNames = $this->getDuplicateHashFields($className);
-
-		$this->buildQueue($tableName, $queueLength);
-		foreach($this->queue as $uid) {
-			$record = $this->database->exec_SELECTgetSingleRow(
-				$fieldNames,
-				$tableName,
-				'uid=' . $uid . ' AND deleted=0'
-			);
-			if($record) {
+	public function find($tableName, $queueLength = 100) {
+		$fieldNames = $this->getDuplicateHashFields($tableName);
+		if (!empty($fieldNames)) {
+			$this->buildQueue($tableName, $fieldNames, $queueLength);
+		}
+		if ((bool) $this->queue) {
+			$doFuzzyHashing = $this->isFuzzyHashingEnabled();
+			$this->addDuplicateTable($tableName);
+			foreach($this->queue as $record) {
+				$uid = $record['uid'];
+				unset($record['uid']);
 				$hash = $this->getHash($record);
-				if ($this->isDuplicate($hash, $tableName)) {
-					$this->setIsDuplicate($tableName, $uid);
+				if ($doFuzzyHashing) {
+					$fuzzyHash = $this->getFuzzyHash($record);
 				}
-				if (!$this->isRecordHashed($tableName, $uid)) {
-					$this->updateHash(NULL, $tableName, $uid, $hash);
+				if ($this->hashRepository->contains($hash, $tableName)) {
+					$this->addDuplicate($tableName, $uid);
+				} else {
+					$this->hashRepository->add($hash, $tableName, $uid);
+				}
+				if (!$this->hashRepository->containsHashForRecord($tableName, $uid)) {
+					// @todo gather and update all hashes at once. Can we use exec_INSERTmultipleRows?
+					$this->hashRepository->update($tableName, $uid, $hash, $fuzzyHash);
 				}
 			}
+			$this->persistDuplicates($tableName);
 		}
 	}
 
@@ -378,80 +350,69 @@ class DuplicateFinderService implements SingletonInterface {
 	 * @param \string $tableName
 	 */
 	public function clearAll($tableName = NULL) {
-		if ($tableName) {
-			$this->clearByTable($tableName);
-		} else {
-			$tableNames = $this->database->exec_SELECTgetRows(
-				'DISTINCT foreign_table',
-				self::HASH_TABLE,
-				'foreign_table!=""'
-			);
-			foreach($tableNames as $table) {
-				$this->clearByTable($table['foreign_table']);
-			}
-		}
+		$this->hashRepository->clear($tableName);
 	}
 
 	/**
-	 * Clears hashes for a table
-	 * Removes all entries in the hash table for a given foreign
-	 * table and un-sets the is_duplicate and duplicate_hash_id fields
-	 * in for all records of this table
-	 *
-	 * @param $tableName
-	 */
-	protected function clearByTable($tableName) {
-		$this->database->exec_UPDATEquery(
-			$tableName,
-			'',
-			array(
-				'is_duplicate' => 0,
-				'duplicate_hash_id' => 0
-			)
-		);
-		$this->database->exec_DELETEquery(
-			self::HASH_TABLE,
-			'foreign_table="' . $tableName . '"'
-		);
-	}
-
-	/**
-	 * Adds a (transient) hash table if it does not exist
+	 * Adds a (transient) duplicate table if it does not exist
 	 *
 	 * @var \string $tableName
 	 */
-	public function addHashTable($tableName) {
-		if(!array_key_exists($tableName, $this->hashTables)) {
-			$this->hashTables[$tableName] = array();
+	public function addDuplicateTable($tableName) {
+		if(!array_key_exists($tableName, $this->duplicateTables)) {
+			$this->duplicateTables[$tableName] = array();
 		}
 	}
 
 	/**
-	 * Add hash to a hash table
+	 * Add duplicate to a duplicate table
 	 * The table has to exist. Note: named hash tables are transient (kept in memory)
 	 *
-	 * @param \string $hash
 	 * @param \string $tableName
-	 * @param \int $uid optional uid
+	 * @param \int $uid Record uid
 	 */
-	public function addHash($hash, $tableName, $uid = NULL) {
-		if(array_key_exists($tableName, $this->hashTables)) {
-			$this->hashTables[$tableName][$hash] = $uid;
+	public function addDuplicate($tableName, $uid) {
+		if(array_key_exists($tableName, $this->duplicateTables)) {
+			$this->duplicateTables[$tableName][] = $uid;
 		}
 	}
 
 	/**
-	 * Get uid related to a given hash value
-	 *
-	 * @param \string $hash
-	 * @param \string $tableName
-	 * @return int|FALSE
+	 * Tells if fuzzy hashing is enabled
+	 * @return \boolean
 	 */
-	public function getUid($hash, $tableName) {
-		if(isset($this->hashTables[$tableName]) AND
-		array_key_exists($hash, $this->hashTables[$tableName])) {
-			return $this->hashTables[$tableName][$hash];
+	public function isFuzzyHashingEnabled() {
+		if (isset($this->configuration['fuzzyHash']['enabled'])) {
+			return (bool)ArrayUtility::getValueByPath(
+						$this->configuration,
+						'fuzzyHash/enabled');
 		}
 		return FALSE;
 	}
+
+	protected function persistDuplicates($tableName) {
+		if (isset($this->duplicateTables[$tableName])) {
+			$duplicates = $this->duplicateTables[$tableName];
+			if ((bool) $duplicates) {
+				$uidList = implode(',', array_unique($duplicates));
+				$this->database->exec_UPDATEquery(
+						$tableName,
+						'uid IN (' . $uidList . ')',
+						array(
+							'is_duplicate' => 1
+						)
+					);
+			}
+		}
+	}
+	
+	/**
+	 * Crops a string to HASH_MAX_LENGTH
+	 * @param \string $hash
+	 * @return \string
+	 */
+	protected function cropHash($hash) {
+		return substr($hash, 0, self::HASH_MAX_LENGTH);
+	}
  }
+

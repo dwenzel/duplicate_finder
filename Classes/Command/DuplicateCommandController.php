@@ -17,11 +17,11 @@ class DuplicateCommandController extends CommandController {
 	/**
 	 * Find Duplicates for a given table
 	 *
-	 * @param \string $class Fully qualified class name
+	 * @param \string $tableName table name
 	 * @param \int $queueLength Queue length: How many records should be processed per run.
 	 */
-	public function findCommand ($class, $queueLength = 100) {
-		$this->duplicateFinderService->find($class, $queueLength);
+	public function findCommand ($tableName, $queueLength = 100) {
+		$this->duplicateFinderService->find($tableName, $queueLength);
 	}
 
 	/**

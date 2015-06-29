@@ -1,5 +1,5 @@
 <?php
-namespace CPSIT\Test\Unit\Configuraton;
+namespace CPSIT\Test\Unit\Configuration;
 
 use TYPO3\CMS\Core\Tests\UnitTestCase;
 

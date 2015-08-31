@@ -346,7 +346,7 @@ class DuplicateFinderServiceTest extends UnitTestCase {
 				'uid' => 1,
 				'fooField' => 'fooFieldValue'
 				);
-		$fixture->_set('configuration', array('fuzzyHash' => 'foo'));
+		$fixture->_set('configuration', array('fuzzyHash' => array('foo')));
 		$fixture->_set('queue', array($record));
 
 		$fixture->expects($this->once())->method('getDuplicateHashFields');
@@ -482,7 +482,7 @@ class DuplicateFinderServiceTest extends UnitTestCase {
 	 * @covers ::isFuzzyHashingEnabled
 	 */
 	public function isFuzzyHashingEnabledReturnsFalseIfNotConfigured() {
-		$configuration = array('fuzzyHash' => 'foo');
+		$configuration = array('fuzzyHash' => array('foo'));
 		$this->fixture->_set('configuration', $configuration);
 
 		$this->assertFalse(

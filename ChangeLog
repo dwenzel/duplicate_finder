@@ -1,3 +1,6 @@
+2018-09-04         [RELEASE] Release of duplicate_finder 0.3.1 (Dirk Wenzel)
+2016-03-03 80c4389 [TASK] composer.json added (Dirk Wenzel)
+
 2015-08-31         [RELEASE] Release of duplicate_finder 0.3.0 (Dirk Wenzel)
 2015-07-07 eba9a6d [TASK] failing unit tests fixed (Dirk Wenzel)
 2015-06-29 b3d5a5b [BUGFIX] illegal line break before namespace declaration removed (Dirk Wenzel)
